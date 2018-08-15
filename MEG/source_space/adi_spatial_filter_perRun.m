@@ -1,76 +1,74 @@
 
-function adi_source_SVM (path2vol, path2data, mriPath, outPath_extdisc, freqbandname, like, dislike, latency)
+function adi_source_SVM (path2vol, path2data, mriPath, outPath_extdisc, freqbandname, condition)
 
 % calculations spatial filter per Run and Subject, 
-time =  latency(1,:);
+% time =  latency(1,:);
 
 %% run 1:
-if ~exist([outPath_extdisc 'MEG\sourcespace\run1\spatialfilter_loose_orientation_singletrials_like_' freqbandname '.mat'], 'file')
-    adi_source_reconstruction_virt_sens(path2vol, path2data, mriPath,  num2str(1), freqbandname, 'like', outPath_extdisc)    
+if ~exist([outPath_extdisc '\run1\spatialfilter_loose_orientation_singletrials_' freqbandname '.mat'], 'file')
+    adi_source_reconstruction_virt_sens(path2vol, path2data, mriPath,  num2str(1), freqbandname, condition, outPath_extdisc)    
 end
-if ~exist([outPath_extdisc 'MEG\sourcespace\run1\spatialfilter_loose_orientation_singletrials_dislike_' freqbandname '.mat'], 'file')
-    adi_source_reconstruction_virt_sens(path2vol, path2data, mriPath, num2str(1), freqbandname, 'dislike', outPath_extdisc)
-end
-if ~exist([outPath_extdisc 'MEG\sourcespace\run1\spatialfilter_loose_orientation_singletrials_dontcare_' freqbandname '.mat'], 'file')
-    adi_source_reconstruction_virt_sens(path2vol, path2data, mriPath, num2str(1), freqbandname, 'dontcare', outPath_extdisc)
-end
-%     clear virtsens_like virtsens_ns_like virtsens_dislike virtsens_ns_dislike
-
-
 
 %% run2:
 
-if ~exist([outPath_extdisc 'MEG\sourcespace\run2\spatialfilter_loose_orientation_singletrials_like_' freqbandname '.mat'], 'file')
-    adi_source_reconstruction_virt_sens(path2vol, path2data, mriPath, num2str(2), freqbandname, 'like', outPath_extdisc)
+if ~exist([outPath_extdisc '\run2\spatialfilter_loose_orientation_singletrials_' freqbandname '.mat'], 'file')
+    adi_source_reconstruction_virt_sens(path2vol, path2data, mriPath, num2str(2), freqbandname, condition, outPath_extdisc)
 end
-if ~exist([outPath_extdisc 'MEG\sourcespace\run2\spatialfilter_loose_orientation_singletrials_dislike_' freqbandname '.mat'], 'file')
-    adi_source_reconstruction_virt_sens(path2vol, path2data, mriPath, num2str(2), freqbandname, 'dislike', outPath_extdisc)
-end
-if ~exist([outPath_extdisc 'MEG\sourcespace\run2\spatialfilter_loose_orientation_singletrials_dontcare_' freqbandname '.mat'], 'file')
-    adi_source_reconstruction_virt_sens(path2vol, path2data, mriPath, num2str(2), freqbandname, 'dontcare', outPath_extdisc)
-end
-%     clear virtsens_like virtsens_ns_like virtsens_dislike virtsens_ns_dislike
-
 
 %% run3:
 
-if ~exist([outPath_extdisc 'MEG\sourcespace\run3\spatialfilter_loose_orientation_singletrials_like_' freqbandname '.mat'], 'file')
-    adi_source_reconstruction_virt_sens(path2vol, path2data, mriPath, num2str(3), freqbandname, 'like', outPath_extdisc)
+if ~exist([outPath_extdisc '\run3\spatialfilter_loose_orientation_singletrials_' freqbandname '.mat'], 'file')
+    adi_source_reconstruction_virt_sens(path2vol, path2data, mriPath, num2str(3), freqbandname, condition, outPath_extdisc)
 end
-if ~exist([outPath_extdisc 'MEG\sourcespace\run3\spatialfilter_loose_orientation_singletrials_dislike_' freqbandname '.mat'], 'file')
-    adi_source_reconstruction_virt_sens(path2vol, path2data, mriPath, num2str(3), freqbandname, 'dislike', outPath_extdisc)
-end
-if ~exist([outPath_extdisc 'MEG\sourcespace\run3\spatialfilter_loose_orientation_singletrials_dontcare_' freqbandname '.mat'], 'file')
-    adi_source_reconstruction_virt_sens(path2vol, path2data, mriPath, num2str(3), freqbandname, 'dontcare', outPath_extdisc)
-end
-%     clear virtsens_like virtsens_ns_like virtsens_dislike virtsens_ns_dislike
 
 end
 
-function [virtsens_ns] = adi_source_reconstruction_virt_sens(path2vol, path2data, mriPath, run, freq, condition, outPath_extdisc)
+function [virtsens] = adi_source_reconstruction_virt_sens(path2vol, path2data, mriPath, run, freq, condition, outPath_extdisc)
     
 % load data:
-    if exist([path2data, condition '500_' run '.mat'], 'file')
-        load ([path2data, condition '500_' run '.mat'], 'cleanMEG_interp')
-    else
-       return
-    end
-    
-    [data_bpfreq] = adi_bpfilter(cleanMEG_interp, freq);
-    
-    for k = 1:length(data_bpfreq.trial)
-        data_bpfreq.trial{1,k} = data_bpfreq.trial{1,k}(1:248,:)
-    end
-    
-    for k = 1:length(data_bpfreq.trial)
-        data_bpfreq.grad.label(249:end) = [];
-        data_bpfreq.grad.chanori(249:end, :) = [];
-        data_bpfreq.grad.chanpos(249:end, :) = [];
-        data_bpfreq.grad.tra(249:end, :) = [];
-        data_bpfreq.label(249:end) = [];
-    end
-    
-    % load template vol:
+index = zeros(3,1);
+condition = cell(3,1);
+if exist([path2data, 'like' '500_' run '.mat'], 'file')
+%    condition{1} = 'data_like_bpfreq';
+   index(1) = 1;
+   data_like = load ([path2data, 'like' '500_' run '.mat'], 'cleanMEG_interp');
+   [data_like_bpfreq] = adi_bpfilter(data_like.cleanMEG_interp, freq);
+   data.like = data_like_bpfreq;
+   clear data_like data_like_bpfreq
+else
+%     condition{1} = [];
+end
+if exist([path2data, 'dislike' '500_' run '.mat'], 'file')
+    index(2) = 1;
+%     condition{2} = 'data_dislike_bpfreq';
+    data_dislike = load ([path2data, 'dislike' '500_' run '.mat'], 'cleanMEG_interp');
+    [data_dislike_bpfreq] = adi_bpfilter(data_dislike.cleanMEG_interp, freq);
+    data.dislike = data_dislike_bpfreq;
+    clear data_dislike clear data_dislike_bpfreq
+else
+%      condition{2} = [];
+end
+if exist([path2data, 'dontcare' '500_' run '.mat'], 'file')
+    index(3) = 1;
+%     condition{3} = 'data_dontcare_bpfreq';
+    data_dontcare = load ([path2data, 'dontcare' '500_' run '.mat'], 'cleanMEG_interp');
+    [data_dontcare_bpfreq] = adi_bpfilter(data_dontcare.cleanMEG_interp, freq);
+    data.dontcare = data_dontcare_bpfreq;
+    clear data_dontcare data_dontcare_bpfreq
+else
+%        condition{3} = [];
+end
+fieldsnames = fields(data);
+% ind_cond = find(~cellfun(@isempty,condition));
+cfg = [];
+switch length( find(index))
+    case 3
+    data_appended = ft_appenddata(cfg, data.(fieldsnames{1}), data.(fieldsnames{2}), data.(fieldsnames{3}));
+    case 2 
+    data_appended = ft_appenddata(cfg, data.(fieldsnames{1}), data.(fieldsnames{2}));
+end   
+
+    %% load template vol:
     if ~exist('template_grid', 'var')
         load('\\nas-fa0efsusr1\herfurkn1\My Documents\MATLAB\Bibliotheken\fieldtrip-20180607\template\headmodel\standard_singleshell');
         cfg = [];
@@ -120,19 +118,19 @@ function [virtsens_ns] = adi_source_reconstruction_virt_sens(path2vol, path2data
     % For this step the individual volume is required:
     if ~exist('sourcmodel', 'var')
         load ([mriPath, 'mri_realigned.mat'])
-        cfg            = [];
-        cfg.resolution = 1;
-        cfg.dim        = [256 256 256];
-        mri_resliced = ft_volumereslice(cfg, mri_realigned);
-        mri_resliced = ft_convert_units(mri_resliced, 'cm')
-        grad = ft_convert_units(data_bpfreq.grad, 'cm');
+%         cfg            = [];
+%         cfg.resolution = 1;
+%         cfg.dim        = [256 256 256];
+%         mri_resliced = ft_volumereslice(cfg, mri_realigned);
+        mri_realigned_cm = ft_convert_units(mri_realigned, 'cm');
+        grad = ft_convert_units(data_appended.grad, 'cm');
         data_bpfreq.grad = grad;
 
         cfg                = [];
         cfg.grid.warpmni   = 'yes';
         cfg.grid.template  = template_grid;
         cfg.grid.nonlinear = 'yes';
-        cfg.mri            = mri_resliced; % nicht sicher
+        cfg.mri            = mri_realigned_cm; % nicht sicher
         sourcemodel        = ft_prepare_sourcemodel(cfg);
     end
     if ~exist('hdm_ind', 'var')
@@ -170,33 +168,34 @@ function [virtsens_ns] = adi_source_reconstruction_virt_sens(path2vol, path2data
 
     %We first create the leadfield using ft_prepare_leadfield using the individual head model from the previous step, the sensor array and the sourcemodel.
     cfg                 = [];
-    cfg.channel         = data_bpfreq.label;% ensure that rejected sensors are not present
-    cfg.grad            = data_bpfreq.grad;
+    cfg.channel         = data_appended.label;% ensure that rejected sensors are not present
+    cfg.grad            = data_appended.grad;
     cfg.vol             = hdm_ind;
     cfg.lcmv.reducerank = 2; % default for MEG is 2, for EEG is 3
     cfg.grid = sourcemodel;
     % cfg.grid.pos=rois; 
-    [grid] = ft_prepare_leadfield(cfg);
+    [leadfield] = ft_prepare_leadfield(cfg);% =grid
 
     %%
     
     cfg = [];
     cfg.covariance = 'yes';
-    cfg.covariancewindow = [-.5 1]; % oder von 0 bis 1?
+    cfg.covariancewindow = [0 1]; % oder von 0 bis 1?
+    cfg.vartrllength = 2;
     cfg.keeptrials = 'yes';
     try
-        avg_data_bpfreq = ft_timelockanalysis(cfg, data_bpfreq);
+        avg_data_appended = ft_timelockanalysis(cfg, data_appended);
     catch ME
         if 1==strcmp(ME.message,'data has variable trial lengths, you specified not to accept that')
-           for j = 1:length(data_bpfreq.time)
-            [ind(j)] =  isequal(length(data_bpfreq.time{j}), 3052);
+           for j = 1:length(data_appended.time)
+            [ind(j)] =  isequal(length(data_appended.time{j}), 3052);
            end
            trl_ind = find(ind == false);
            for j=1:length(trl_ind)
-               data_bpfreq.time{1, trl_ind(j)}(:,1)=[];
-               data_bpfreq.trial{1,trl_ind(j)}(:,1)=[];
+               data_appended.time{1, trl_ind(j)}(:,1)=[];
+               data_appended.trial{1,trl_ind(j)}(:,1)=[];
            end
-           avg_data_bpfreq = ft_timelockanalysis(cfg, data_bpfreq);    
+           avg_data_appended = ft_timelockanalysis(cfg, data_appended);    
         end
         
     end
@@ -204,27 +203,26 @@ function [virtsens_ns] = adi_source_reconstruction_virt_sens(path2vol, path2data
     % Now we make a first call to ft_sourceanalysis in order to compute the spatial filters on the basis of the entire data and keep them in the output for a later use.
     cfg = [];
     cfg.method = 'lcmv';
-    cfg.grid = grid;  % Stefan: cfg.grid = sourcemodel
+    cfg.grid = leadfield;  % Stefan: cfg.grid = sourcemodel
     cfg.vol = hdm_ind; % Stefan: cfg.headmodel = vol;
     cfg.lcmv.keepfilter = 'yes';
     cfg.lcmv.projectnoise = 'yes';
-    cfg.channel = data_bpfreq.label;
+    cfg.channel = data_appended.label;
     cfg.lcmv.fixedori='no';
     cfg.lcmv.lamda='5%';
     try
-        source_avg = ft_sourceanalysis(cfg, avg_data_bpfreq);
+        source_avg = ft_sourceanalysis(cfg, avg_data_appended);
     catch
 
     end
-    
-  
-    outPath_extdisc_subj = [ outPath_extdisc 'MEG\sourcespace\run' run filesep];
+
+    outPath_extdisc_subj = [ outPath_extdisc 'run' run filesep];
     if ~exist(outPath_extdisc_subj, 'dir')
         mkdir (outPath_extdisc_subj)
     end
     
     spatialfilter_orig = source_avg.avg.filter;
-    save([outPath_extdisc_subj 'spatialfilter_loose_orientation_singletrials_' condition '_' freq], 'spatialfilter_orig')
+    save([outPath_extdisc_subj 'spatialfilter_loose_orientation_singletrials_' freq], 'spatialfilter_orig')
     
 %     cfg = [];
 %     cfg.parameter = 'avg.pow';
@@ -364,7 +362,7 @@ function [virtsens_ns] = adi_source_reconstruction_virt_sens(path2vol, path2data
 end
 
 
-function [data_bpfreq] = adi_bpfilter(filename, bpname)
+function [data_bpfreq_res_sel] = adi_bpfilter(filename, bpname)
 
 
 switch bpname
@@ -401,7 +399,30 @@ if isfield(filename, 'trialinfo')
     data_bpfreq.trialinfo = filename.trialinfo;
 end
 
-       
+    
+for k = 1:length(data_bpfreq.trial)
+    data_bpfreq.trial{1,k} = data_bpfreq.trial{1,k}(1:248,:)
+end
+
+for k = 1:length(data_bpfreq.trial)
+    data_bpfreq.grad.label(249:end) = [];
+    data_bpfreq.grad.chanori(249:end, :) = [];
+    data_bpfreq.grad.chanpos(249:end, :) = [];
+    data_bpfreq.grad.tra(249:end, :) = [];
+    data_bpfreq.label(249:end) = [];
+end
+
+    
+cfg =[];
+cfg.resamplefs = 256;
+cfg.detrend = 'no';
+[data_bpfreq_res] = ft_resampledata(cfg, data_bpfreq);
+
+cfg =[];
+cfg.latency = [-0.5 1];
+data_bpfreq_res_sel = ft_selectdata(cfg, data_bpfreq_res);
+
+
 end
      
 

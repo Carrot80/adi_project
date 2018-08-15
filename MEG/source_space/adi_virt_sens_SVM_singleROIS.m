@@ -1,67 +1,55 @@
-function [] = adi_virt_sens_SVM(outPath, path_extdisc, data_all_conditions, conditions, freqbandname, cfg_virtsens)
 
 
-adi_crossvalidation (data_all_conditions, conditions, freqbandname, outPath, cfg_virtsens);
+function [Condition1vs2] = adi_virt_sens_SVM (outPath, path_extdisc, freqbandname, cfg_virtsens)
 
-
-% 
-% NameCond1vs2 = [cfg_virtsens '_' name_condition1 '_vs_' name_condition2 '_allRuns'];
-% if ~exist([SubjOutPath NameCond1vs2 '_' freqbandname '.mat'], 'file')  
-%     
-%     
-%     
-%     if 1 == isempty(data_condition1)
-%         load ([path_extdisc '\MEG\sourcespace\runs_appended\virtsens\' cfg_virtsens '_' name_condition1 '_allRuns_' freqbandname '.mat'], 'vs_allRuns');
-%         data_condition1 = vs_allRuns;
-%         clear vs_allRuns
-%     end
-%     
-%     if 1 == isempty(data_condition2)
-%           load ([path_extdisc '\MEG\sourcespace\runs_appended\virtsens\' cfg_virtsens '_' name_condition2 '_allRuns_' freqbandname '.mat'], 'vs_allRuns');
-%           data_condition2 = vs_allRuns;
-%           clear vs_allRuns
-%     end
-%     
-%     if isempty (data_condition1) || isempty(data_condition2)
-%         return
-%     end
-%     
-%     cond1 = [cfg_virtsens '_' name_condition1 '_allRuns'];
-%     cond2 = [cfg_virtsens '_' name_condition2 '_allRuns'];
-% 
-%     label =  cell(1, length(data_condition1.trial{1,2}(:,1)));
-%     for k = 1:length(data_condition1.trial{1,2}(:,1))
-%        label{k} = num2str(k);
-%     end
-%     
-%     data_condition1.label = label;
-%     data_condition2.label = label;
-%     [Condition1vs2] = adi_crossvalidation (data_all_conditions, freqbandname, SubjOutPath);
-%     [Condition1vs2] = adi_crossvalidation (data_all_conditions, freqbandname, NameCond1vs2, SubjOutPath);
-%     adi_figureTPRcrossval_SVM (Condition1vs2, time, cond1, cond2, NameCond1vs2, SubjOutPath, freqbandname)
-% 
-%     clear data_condition1 data_condition2
-% end
-
-end
-
-function [Condition1vs2] = adi_crossvalidation (data_all_conditions, conditions, freqbandname, outPath, cfg_virtsens)
-
+load ('\\nas-fa0efsusr1\herfurkn1\My Documents\MATLAB\atlas_source_indices.mat')
 outPath_SVM_results_dmlt = [outPath 'SVM_results_dmlt\'];
 if ~exist(outPath_SVM_results_dmlt, 'dir')
     mkdir(outPath_SVM_results_dmlt)
 end
 
-if exist([outPath_SVM_results_dmlt conditions{1} '_vs_' conditions{2} '_' freqbandname '.mat'], 'file')
-    return
+% if exist([outPath_SVM_results_dmlt conditions{1} '_vs_' conditions{2} '_' freqbandname '.mat'], 'file')
+%     return
+% end
+
+load  ([path_extdisc 'MEG\sourcespace\noROIs\runs_appended\virtsens\' cfg_virtsens '_all_conditions_allRuns_', freqbandname, '.mat'], 'vs_allRuns');
+data_all_conditions = vs_allRuns;
+clear vs_allRuns
+conditions = fields(data_all_conditions);
+
+%% ROIs extrahieren:
+for m=1:length(atlas_downsampled.sources_roi_numbers)
+    temp(m,1)=atlas_downsampled.sources_roi_numbers{m,1};
+    temp(m,2) = m;
+end
+ROIs_sorted = sortrows(temp);
+
+for k = 1:size(conditions,1)
+    for m=1:length(atlas_downsampled.tissuelabel)
+        index_tissuelabel = find (ROIs_sorted(:,1)==m)
+        index_sources = ROIs_sorted(index_tissuelabel,2);
+        for j = 1:length(data_all_conditions.(conditions{1}).trial)
+            vs_roi.trial{1,j} = data_all_conditions.(conditions{1}).trial{1,j}(index_sources,:);
+        end
+        vs_roi.time = data_all_conditions.(conditions{1}).time;
+        vs_roi.label = cellstr(num2cell(index_sources));
+        cfg = []; 
+        avg = ft_timelockanalysis(cfg, vs_roi); 
+        % hier SVM? evtl. zu wenig daten => auch möglich, alle
+        % frequenzbänder in SVM einzubeziehen 
+        % evtl. avg und figure für alle ROIs?
+        % hier weitermachen
+    end
 end
 
-if isempty (data_all_conditions)
-    load  ([outPath '\runs_appended\virtsens\' cfg_virtsens '_all_conditions_allRuns_', freqbandname, '.mat'], 'vs_allRuns');
-    data_all_conditions = vs_allRuns;
-end
 
 
+
+
+
+
+
+%%
 cfg             = [];
 cfg.parameter   = 'trial';
 cfg.keeptrials  = 'yes'; % classifiers operate on individual trials
@@ -75,7 +63,10 @@ switch size(fields(data_all_conditions), 1)
         tCondition.(conditions{1}) = ft_timelockanalysis(cfg, data_all_conditions.(conditions{1}));
         tCondition.(conditions{2}) = ft_timelockanalysis(cfg, data_all_conditions.(conditions{2})); 
 end
-    
+  
+
+
+
 cfg         = [];
 cfg.method  = 'crossvalidate'; % layout braucht es nicht, verschiedene layouts führen zum gleichen ergebnis
 cfg.statistic = {'accuracy', 'binomial', 'contingency'};

@@ -1,106 +1,139 @@
 
-function  [virtsens_dislike_allRuns, virtsens_like_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname, cfg_virtsens)
+function  [virtsens_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname, cfg_virtsens, condition)
 
 
- [virtsens_like_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname, 'like', cfg_virtsens)
- [virtsens_dislike_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname, 'dislike', cfg_virtsens)
+ [virtsens_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname, cfg_virtsens, condition);
+ 
  
 end
 
-function [vs_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname, condition, cfg_virtsens)
+function [vs_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname, cfg_virtsens, condition)
 
 % append Runs 
 % Channels   --> Configuration of Brainstorm MEG Channels    
-vs_allRuns = [];
+if ~exist([outPath 'MEG\sourcespace\noROIs\runs_appended\virtsens\' cfg_virtsens '_all_conditions_allRuns_', freqname, '.mat'], 'file')
+    vs_allRuns = [];
+    spatialfilter = {};
+    for j = 1:size(condition,2)
+        fileName = ([condition{j} '*.mat']);
+        files = dir(fullfile(path2data, fileName));
+        size_files = size(files);
 
-if ~exist([outPath '\MEG\sourcespace\runs_appended\virtsens\' cfg_virtsens '_' condition '_allRuns_', freqname, '.mat'], 'file')
-    fileName = ([condition '*.mat']);
-    files = dir(fullfile(path2data, fileName));
-    size_files = size(files);
-    
-    for i = 1:(size_files(1,1))
-        load ([path2data files(i).name]);
-        
-        [data_bpfreq] = adi_bpfilter(cleanMEG_interp, freqname);
-        
-            for k = 1:length(data_bpfreq.trial)
-                data_bpfreq.trial{1,k} = data_bpfreq.trial{1,k}(1:248,:);
+        for i = 1:(size_files(1,1))
+            load ([path2data files(i).name]);
+
+            [data_bpfreq] = adi_bpfilter(cleanMEG_interp, freqname);
+         
+            if ~isfield(spatialfilter, (['run' num2str(i)]))
+                spatialfilter.(['run' num2str(i)]) = load ([outPath 'MEG\sourcespace\spatialfilter\run' num2str(i) '\spatialfilter_loose_orientation_singletrials_' freqname '.mat']);
+                spatialfilter.(['run' num2str(i)]) = cat(1,spatialfilter.(['run' num2str(i)]).spatialfilter_orig{:});   
             end
-    
-            for k = 1:length(data_bpfreq.trial)
-                data_bpfreq.grad.label(249:end) = [];
-                data_bpfreq.grad.chanori(249:end, :) = [];
-                data_bpfreq.grad.chanpos(249:end, :) = [];
-                data_bpfreq.grad.tra(249:end, :) = [];
-                data_bpfreq.label(249:end) = [];
-            end      
 
-        switch i
-            case 1
-                load ([outPath 'MEG\sourcespace\run1\spatialfilter_loose_orientation_singletrials_' condition '_' freqname '.mat']);
-            case 2 
-                load ([outPath 'MEG\sourcespace\run2\spatialfilter_loose_orientation_singletrials_' condition '_' freqname '.mat']);
-            case 3
-                load ([outPath 'MEG\sourcespace\run3\spatialfilter_loose_orientation_singletrials_' condition '_' freqname '.mat']);
-        end
-        spatialfilter = cat(1,spatialfilter_orig{:});        
-        virtsens = [];
-        for k = 1:length(data_bpfreq.trial)
-            virtsens.trial{k} = spatialfilter*data_bpfreq.trial{k};
-        end
-        virtsens.time = data_bpfreq.time;
-        virtsens.fsample = data_bpfreq.fsample;
+                
+            virtsens = [];
+            for k = 1:length(data_bpfreq.trial)
+                virtsens.trial{k} = spatialfilter.(['run' num2str(i)])*data_bpfreq.trial{k};
+            end
         
+            virtsens.time = data_bpfreq.time;
+            virtsens.fsample = data_bpfreq.fsample;
+            for p = 1:length(virtsens.trial)
+                euclid_norm = zeros(length(virtsens.trial{1,p})/3, size(virtsens.trial{1,p}(1,:),2));
+                n = 1;
+                for k = 1:3:length(virtsens.trial{1,p})
+                    euclid_norm(n,:) = sqrt(virtsens.trial{1,p}(k,:).^2+virtsens.trial{1,p}(k+1,:).^2+virtsens.trial{1,p}(k+2,:).^2);
+                    n = n+1;
+                end  
+                vs_euclid_norm.trial{1,p} = euclid_norm;
+                clear euclid_norm
+            end
+            virtsens.trial = vs_euclid_norm.trial;
+            
+            virtsens.label = cell(length(virtsens.trial{1,1}(:,1)), 1);
+            for n = 1:length(virtsens.trial{1,1}(:,1))
+                virtsens.label{n,1}=num2str(n);
+            end
+            
+            % sanity check:
+            cfg=[];
+            avg = ft_timelockanalysis(cfg, virtsens);
+            figure;
+            plot(virtsens.time{1,1}, mean(avg.avg))
+            sanity_path = [outPath 'MEG\sourcespace\noROIs\sanity_check\'];
+            if ~exist(sanity_path, 'dir')
+                mkdir (sanity_path)
+            end
+            savefig([sanity_path 'mean_virtsens_' files(i).name '_' freqname '.fig'])
+            close
+            
          % siehe Skript von Yuval: => all will have a similar noise level
         
-        if 1 == strcmp (cfg_virtsens, 'virtsens_ns')
-            ns = mean(abs(spatialfilter),2);
-            
-            for k = 1:length(virtsens.trial)
-                virtsens_ns.trial{k} = virtsens.trial{1,k}./repmat(ns,1,size(virtsens.trial{1,k},2)); % => all will have a similar noise level
+            if 1 == strcmp (cfg_virtsens, 'virtsens_ns')
+                ns = mean(abs(spatialfilter),2);
+
+                for k = 1:length(virtsens.trial)
+                    virtsens_ns.trial{k} = virtsens.trial{1,k}./repmat(ns,1,size(virtsens.trial{1,k},2)); % => all will have a similar noise level
+                end
+
+                virtsens_ns.time = virtsens.time;
+                virtsens_ns.fsample = virtsens.fsample;
+
+                for k = 1:length(virtsens_ns.trial{1}(:,1))
+                    virtsens_ns.label{k} = num2str(k);
+                end
+                virtsens = virtsens_ns;
+                clear virtsens_ns
             end
 
-            virtsens_ns.time = virtsens.time;
-            virtsens_ns.fsample = virtsens.fsample;
+            files2append.(condition{j}).(['run' num2str(i)]) = virtsens;
+            clear virtsens data_bpfreq cleanMEG_interp vs_euclid_norm
 
-            for k = 1:length(virtsens_ns.trial{1}(:,1))
-                virtsens_ns.label{k} = num2str(k);
-            end
-            virtsens = virtsens_ns;
-            clear virtsens_ns
         end
-        
-        % timesamples reduzieren, um Dateigröße ebenfalls zu reduzieren:
-        cfg = [];
-        cfg.latency = [-0.5 1]; 
-        virtsens = ft_selectdata(cfg, virtsens);
-
-        files2append(:,i) = virtsens;
-        clear spatialfilter_orig spatialfilter virtsens data_bpfreq cleanMEG_interp
-
     end
-   
-    switch size_files(1)
-        case 3
-            vs_allRuns.trial = [files2append(1).trial files2append(2).trial files2append(3).trial];
-            vs_allRuns.time = [files2append(1).time files2append(2).time files2append(3).time];
-        case 2
-            vs_allRuns.trial = [files2append(1).trial files2append(2).trial];
-            vs_allRuns.time = [files2append(1).time files2append(2).time];
+
+    for k = 1:size(fields(files2append),1)
+        switch size(fields(files2append.(condition{k})),1)
+            case 3 
+                vs_allRuns.(condition{k}).trial = [files2append.(condition{k}).(['run' num2str(1)]).trial files2append.(condition{k}).(['run' num2str(2)]).trial files2append.(condition{k}).(['run' num2str(3)]).trial];
+                vs_allRuns.(condition{k}).time = [files2append.(condition{k}).(['run' num2str(1)]).time files2append.(condition{k}).(['run' num2str(2)]).time files2append.(condition{k}).(['run' num2str(3)]).time];
+                vs_allRuns.(condition{k}).label =  files2append.(condition{k}).(['run' num2str(1)]).label;
+            case 2
+                vs_allRuns.(condition{k}).trial = [files2append.(condition{k}).(['run' num2str(1)]).trial files2append.(condition{k}).(['run' num2str(2)]).trial];
+                vs_allRuns.(condition{k}).time = [files2append.(condition{k}).(['run' num2str(1)]).time files2append.(condition{k}).(['run' num2str(2)]).time];
+                vs_allRuns.(condition{k}).label =  files2append.(condition{k}).(['run' num2str(1)]).label;
+        end
     end
     
-    pathAppended = [outPath '\MEG\sourcespace\runs_appended\virtsens\'];
+    % sanity check Nr. 2:
+    condition = fields(files2append);
+    cfg = [];
+    for m = 1:size(fields(vs_allRuns),1)
+        avg = ft_timelockanalysis(cfg, vs_allRuns.(condition{m}));
+        figure;
+        plot(avg.time, mean(avg.avg))
+        savefig([sanity_path 'mean_virtsens_allRuns_' (condition{m}) '_' freqname '.fig'])
+        close
+    end
+    
+    pathAppended = [outPath '\MEG\sourcespace\noROIs\runs_appended\virtsens\'];
     if ~exist ( pathAppended, 'dir')
         mkdir (pathAppended)
     end
-    save ([outPath 'MEG\sourcespace\runs_appended\virtsens\' cfg_virtsens '_' condition '_allRuns_', freqname, '.mat'], 'vs_allRuns', '-v7.3');
+   
+    save ([outPath 'MEG\sourcespace\noROIs\runs_appended\virtsens\' cfg_virtsens '_all_conditions_allRuns_', freqname, '.mat'], 'vs_allRuns', '-v7.3');
+
+else
+    vs_allRuns = [];
+    %load ([outPath 'MEG\sourcespace\noROIs\runs_appended\virtsens\' cfg_virtsens '_all_conditions_allRuns_', freqname, '.mat'], 'vs_allRuns');
+end
+
 end
 
 
-end
 
 
-function [data_bpfreq] = adi_bpfilter(filename, bpname)
+
+function [data_bpfreq_res_sel] = adi_bpfilter(filename, bpname)
 
 
 switch bpname
@@ -136,6 +169,33 @@ data_bpfreq.ChannelFlag_Bst = filename.ChannelFlag_Bst;
 if isfield(filename, 'trialinfo')
     data_bpfreq.trialinfo = filename.trialinfo;
 end
+
+for k = 1:length(data_bpfreq.trial)
+    data_bpfreq.trial{1,k} = data_bpfreq.trial{1,k}(1:248,:);
+end    
+
+for k = 1:length(data_bpfreq.trial)
+    data_bpfreq.grad.label(249:end) = [];
+    data_bpfreq.grad.chanori(249:end, :) = [];
+    data_bpfreq.grad.chanpos(249:end, :) = [];
+    data_bpfreq.grad.tra(249:end, :) = [];
+    data_bpfreq.label(249:end) = [];
+end
+if 3053 ==length(data_bpfreq.time{1,1}) 
+    for k = 1:length(data_bpfreq.trial)
+        data_bpfreq.trial{1,k}(:,1) = [];
+        data_bpfreq.time{1,k}(:,1) = [];
+    end
+end
+
+cfg =[];
+cfg.resamplefs = 256;
+cfg.detrend = 'no';
+[data_bpfreq_res] = ft_resampledata(cfg, data_bpfreq);
+
+cfg =[];
+cfg.latency = [-0.5 1];
+data_bpfreq_res_sel = ft_selectdata(cfg, data_bpfreq_res);
 
        
 end
