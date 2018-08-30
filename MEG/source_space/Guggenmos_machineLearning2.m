@@ -14,7 +14,7 @@
  function [sessions] = mk_SVM_struct(sessions, path2data, outPath_extdisc, freqname, like, dislike, dontcare, run, meanmax)
   
   fileName = (['vs_' meanmax '*' freqname '.mat']);
-  files = dir(fullfile([path2data 'run' run filesep fileName]));
+  files = dir(fullfile([path2data 'allROIs\run' run filesep fileName]));
   size_files = size(files);
     
   for i = 1:(size_files(1,1))

@@ -382,6 +382,29 @@ for i = 1:length(ListSubj)
 
 end
 
+%% adi recoding of responses: da einige Probanden bei einigen Fußbällen sowohl like, dislike, und dontcare angegeben haben, werden diese
+% Ball-Antworten recodiert und in die Kategorie "dontcare" zugeordnet.
+% Beispiel: nl_adi_04 beurteilte den rwv-Ball mal positiv (like), mal
+% negativ(dislike) => Antworten und Stimuli des rwv-Balls werden in die
+% Kategorie 'dontcare' verschoben
+
+fieldtrippath = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+
+subjects = {'nl_adi_04'; 'nl_adi_05'; 'nl_adi_08'; 'nl_adi_12'; 'nl_adi_17'};
+ball_combinations2recode.nl_adi_04 = {'rwv', 'gbf'};
+ball_combinations2recode.nl_adi_05 = {'rwv', 'ggs', 'gbf'};
+ball_combinations2recode.nl_adi_08 = {'rwv', 'rws', 'rwf'};
+ball_combinations2recode.nl_adi_12 = {'ggf', 'rwf'};
+ball_combinations2recode.nl_adi_17 = {'ggf', 'ggv'};
+
+% triggercodes = cell(9,2);
+
+triggercodepattern = {'gbv', 'rws', 'rwf', 'ggv', 'gbs', 'gbf', 'rwv', 'ggs', 'ggf'}; 
+triggercodes = {'102', '104', '106', '108', '4196', '4198', '4200', '4202', '4204'};
+
+% adi_recoding_of_responses(fieldtrippath, subjects, ball_combinations2recode, triggercodes, triggercodepattern, num2str(1));
+% adi_recoding_of_responses(fieldtrippath, subjects, ball_combinations2recode, triggercodes, triggercodepattern, num2str(2));
+adi_recoding_of_responses(fieldtrippath, subjects, ball_combinations2recode, triggercodes, triggercodepattern, num2str(3));
 
 %% SVM based on virtual sensors per Subject and run - lcmv Beamformer
 % calculations of spatial filter, multiplies it with avgdata and runs Support
@@ -407,22 +430,22 @@ for i = 1:length(ListSubj)
    
 end
 
-
-    %% append virtual sensor output (runs per subject):
-    % noch mal durchführen
+%% append virtual sensor output (runs per subject):
+% Gruppenvergleich nochmal durchführen (siehe unten)
+% dmlt toolbox funktion nicht richtig, kann gelöscht werden
 clear    
 fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
 ListSubj = dir(fieldtripPath);
 ListSubj(1:2) = [];
    
-    for i =  3 : length(ListSubj)  
+    for i = [1 2 4: length(ListSubj)  ]
         path2data = [fieldtripPath ListSubj(i).name '\MEG_analysis\noisereduced\1_95Hz\02_interpolated\'];
-        path_extdisc = (['L:\Arbeit\Adidas\fieldtrip_Auswertung\single_subjects\'  ListSubj(i).name filesep]);
+        path_extdisc = (['E:\Adidas\fieldtrip_Auswertung\single_subjects\'  ListSubj(i).name filesep]);
         outPath = [path_extdisc 'MEG\sourcespace\noROIs\'];
         condition = {'like', 'dislike', 'dontcare'};
         
         [virtsens_allRuns] = adi_append_virtSensMEG(path2data, path_extdisc, 'bp1-45Hz', 'virtsens', condition);
-        adi_virt_sens_SVM_allRuns (outPath, path_extdisc, virtsens_allRuns, condition, 'bp1-45Hz', 'virtsens')
+%         adi_virt_sens_SVM_allRuns (outPath, path_extdisc, virtsens_allRuns, condition, 'bp1-45Hz', 'virtsens')
         clear virtsens_allRuns
 %         
 %         [virtsens_ns_dislike_allRuns, virtsens_ns_like_allRuns] = adi_append_virtSensMEG(path2data, pathAppended, 'bp1-45Hz', 'virtsens_ns');
@@ -430,7 +453,7 @@ ListSubj(1:2) = [];
 %         clear virtsens_ns_dislike_allRuns virtsens_ns_like_allRuns
 %  
         [virtsens_allRuns] = adi_append_virtSensMEG(path2data, path_extdisc, 'delta', 'virtsens', condition);
-        adi_virt_sens_SVM_allRuns (outPath, path_extdisc, virtsens_allRuns, condition, 'delta', 'virtsens')
+%         adi_virt_sens_SVM_allRuns (outPath, path_extdisc, virtsens_allRuns, condition, 'delta', 'virtsens')
         clear virtsens_allRuns
         %         
 %         [virtsens_ns_dislike_allRuns, virtsens_ns_like_allRuns] = adi_append_virtSensMEG(path2data, pathAppended, 'delta', 'virtsens_ns');
@@ -438,7 +461,7 @@ ListSubj(1:2) = [];
 %         clear virtsens_ns_dislike_allRuns virtsens_ns_like_allRuns
 %       
         [virtsens_allRuns] = adi_append_virtSensMEG(path2data, path_extdisc, 'theta', 'virtsens', condition);
-        adi_virt_sens_SVM_allRuns (outPath, path_extdisc, virtsens_allRuns, condition, 'theta', 'virtsens')
+%         adi_virt_sens_SVM_allRuns (outPath, path_extdisc, virtsens_allRuns, condition, 'theta', 'virtsens')
         clear virtsens_allRuns
 %         
 %         [virtsens_ns_dislike_allRuns, virtsens_ns_like_allRuns] = adi_append_virtSensMEG(path2data, pathAppended, 'theta', 'virtsens_ns');
@@ -446,7 +469,7 @@ ListSubj(1:2) = [];
 %         clear virtsens_ns_dislike_allRuns virtsens_ns_like_allRuns
         
         [virtsens_allRuns] = adi_append_virtSensMEG(path2data, path_extdisc, 'alpha', 'virtsens', condition);
-        adi_virt_sens_SVM_allRuns (outPath, path_extdisc, virtsens_allRuns, condition, 'alpha', 'virtsens')
+%         adi_virt_sens_SVM_allRuns (outPath, path_extdisc, virtsens_allRuns, condition, 'alpha', 'virtsens')
         clear virtsens_allRuns 
         
 %         [virtsens_ns_dislike_allRuns, virtsens_ns_like_allRuns] = adi_append_virtSensMEG(path2data, pathAppended, 'alpha', 'virtsens_ns');
@@ -454,7 +477,7 @@ ListSubj(1:2) = [];
 %         clear virtsens_ns_dislike_allRuns virtsens_ns_like_allRuns
         
         [virtsens_allRuns] = adi_append_virtSensMEG(path2data, path_extdisc, 'beta', 'virtsens', condition);
-        adi_virt_sens_SVM_allRuns (outPath, path_extdisc, virtsens_allRuns, condition, 'beta', 'virtsens')
+%         adi_virt_sens_SVM_allRuns (outPath, path_extdisc, virtsens_allRuns, condition, 'beta', 'virtsens')
         clear virtsens_allRuns
 %         
 %         [virtsens_ns_dislike_allRuns, virtsens_ns_like_allRuns] = adi_append_virtSensMEG(path2data, pathAppended, 'beta', 'virtsens_ns');
@@ -462,7 +485,7 @@ ListSubj(1:2) = [];
 %         clear virtsens_ns_dislike_allRuns virtsens_ns_like_allRuns
         
         [virtsens_allRuns] = adi_append_virtSensMEG(path2data, path_extdisc, 'low_gamma', 'virtsens', condition);
-        adi_virt_sens_SVM_allRuns (outPath, path_extdisc, virtsens_allRuns, condition, 'low_gamma', 'virtsens')
+%         adi_virt_sens_SVM_allRuns (outPath, path_extdisc, virtsens_allRuns, condition, 'low_gamma', 'virtsens')
         clear virtsens_allRuns
         
         
@@ -484,61 +507,10 @@ ListSubj(1:2) = [];
  figure_comparison_singleSubjects2(subjpath, 'virtsens_like_vs_dislike_allRuns', 'alpha', time, path2fig) 
  figure_comparison_singleSubjects2(subjpath, 'virtsens_like_vs_dislike_allRuns', 'beta', time, path2fig)    
 
- 
-%% calculates Beamformer for allRuns per subject and run SVM afterwards 
-% noch nicht durchgeführt
-fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
-ListSubj = dir(fieldtripPath);
-ListSubj(1:2) = [];
-for i = 3:length(ListSubj) 
-    
-   path2vol = [fieldtripPath ListSubj(i).name '\MEG_analysis\noisereduced\1_95Hz\05_source_space\vol\'];
-   path_T1warped_ft = ([fieldtripPath, ListSubj(i).name, '\MEG_EEG_input\T1_warped\']);
-   outPath_extdisc = (['L:\Arbeit\Adidas\fieldtrip_Auswertung\source_analysis\single_subjects\'  ListSubj(i).name '\sourcespace\runs_appended\']);
-   path2data = [fieldtripPath ListSubj(i).name '\MEG_analysis\noisereduced\1_95Hz\'];
-   outPath = [fieldtripPath ListSubj(i).name '\MEG_analysis\noisereduced\1_95Hz\05_source_space\allRuns\source_reconstruction\SVM_results\'];
-   latency = [-0.4:0.01:0.97; -0.37:0.01:1];
-   
-   if ~exist(outPath, 'dir')
-      mkdir (outPath)
-   end
-    
-   [virtsens_like, virtsens_dislike] = adi_source_reconstruction_allRuns(path2vol, path2data, path_T1warped_ft, outPath, outPath_extdisc, 'bp1-45Hz', 'like', 'dislike', latency, 'virtsens');
-   adi_virt_sens_SVM_allRuns (outPath, path2data, outPath_extdisc, virtsens_like, virtsens_dislike, 'like', 'dislike', latency, 'bp1-45Hz', 'virtsens')
-   clear virtsens_like virtsens_dislike
-   
-   [virtsens_like, virtsens_dislike] = adi_source_reconstruction_allRuns(path2vol, path2data, path_T1warped_ft, outPath, outPath_extdisc, 'delta', 'like', 'dislike', latency, 'virtsens');
-   adi_virt_sens_SVM_allRuns (outPath, path2data, outPath_extdisc, virtsens_like, virtsens_dislike, 'like', 'dislike', latency, 'delta', 'virtsens')
-   clear virtsens_like virtsens_dislike
-   
-   [virtsens_like, virtsens_dislike] = adi_source_reconstruction_allRuns(path2vol, path2data, path_T1warped_ft, outPath, outPath_extdisc, 'theta', 'like', 'dislike', latency, 'virtsens');
-   adi_virt_sens_SVM_allRuns (outPath, path2data, outPath_extdisc, virtsens_like, virtsens_dislike, 'like', 'dislike', latency, 'theta', 'virtsens')
-   clear virtsens_like virtsens_dislike
-   
-   [virtsens_like, virtsens_dislike] = adi_source_reconstruction_allRuns(path2vol, path2data, path_T1warped_ft, outPath, outPath_extdisc, 'alpha', 'like', 'dislike', latency, 'virtsens');
-   adi_virt_sens_SVM_allRuns (outPath, path2data, outPath_extdisc, virtsens_like, virtsens_dislike, 'like', 'dislike', latency, 'alpha', 'virtsens')
-   clear virtsens_like virtsens_dislike
-   
-   [virtsens_like, virtsens_dislike] = adi_source_reconstruction_allRuns(path2vol, path2data, path_T1warped_ft, outPath, outPath_extdisc, 'beta', 'like', 'dislike', latency, 'virtsens');
-   adi_virt_sens_SVM_allRuns (outPath, path2data, outPath_extdisc, virtsens_like, virtsens_dislike, 'like', 'dislike', latency, 'beta', 'virtsens')
-   clear virtsens_like virtsens_dislike
-   
-   [virtsens_like, virtsens_dislike] = adi_source_reconstruction_allRuns(path2vol, path2data, path_T1warped_ft, outPath, outPath_extdisc, 'low_gamma', 'like', 'dislike', latency, 'virtsens');
-   adi_virt_sens_SVM_allRuns (outPath, path2data, outPath_extdisc, virtsens_like, virtsens_dislike, 'like', 'dislike', latency, 'low_gamma', 'virtsens')
-   clear virtsens_like virtsens_dislike
-    
-   [virtsens_like, virtsens_dislike] = adi_source_reconstruction_allRuns(path2vol, path2data, path_T1warped_ft, outPath, outPath_extdisc, 'high_gamma', 'like', 'dislike', latency, 'virtsens');
-   adi_virt_sens_SVM_allRuns (outPath, path2data, outPath_extdisc, virtsens_like, virtsens_dislike, 'like', 'dislike', latency, 'high_gamma', 'virtsens')
-   clear virtsens_like virtsens_dislike
-    
-end
-
-
-
 
 %% group analysis: append virtual sensors of all subjects and compute SVM:
 % funktioniert nicht, out of memory
-path2extdisc = 'L:\Arbeit\Adidas\fieldtrip_Auswertung\source_analysis\single_subjects\';
+path2extdisc = 'E:\Adidas\fieldtrip_Auswertung\source_analysis\single_subjects\';
 pathStatistics_group = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\group_analysis\source_space\MEG\SVM_crossvalidation\';
 latency = [-0.4:0.01:0.97; -0.37:0.01:1]; 
 
@@ -559,6 +531,27 @@ adi_crossvalidation_group_EEG(group_data_like, group_data_dislike, pathStatistic
 
 [group_data_like, group_data_dislike] = adi_append_group_MEG_sourcespace (path2extdisc, 'low_gamma');
 adi_crossvalidation_group_EEG(group_data_like, group_data_dislike, pathStatistics_group, latency, 'low_gamma')   
+
+
+  %% keine ROIs werden extrahiert
+
+clear    
+fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+ListSubj = dir(fieldtripPath);
+ListSubj(1:2) = [];
+   
+    for i = 1 : length(ListSubj)  
+        path2data = [fieldtripPath ListSubj(i).name '\MEG_analysis\noisereduced\1_95Hz\02_interpolated\'];
+        path_extdisc = (['E:\Adidas\fieldtrip_Auswertung\single_subjects\'  ListSubj(i).name filesep]);
+        outPath = [path_extdisc 'MEG\sourcespace\singleROIs\'];
+        
+        adi_virt_sens_SVM_noROIs (outPath, path_extdisc, 'bp1-45Hz', 'virtsens')
+        adi_virt_sens_SVM_noROIs (outPath, path_extdisc, 'delta', 'virtsens')
+        adi_virt_sens_SVM_noROIs (outPath, path_extdisc, 'theta', 'virtsens')
+        adi_virt_sens_SVM_noROIs (outPath, path_extdisc, 'alpha', 'virtsens')
+        adi_virt_sens_SVM_noROIs (outPath, path_extdisc, 'beta', 'virtsens')
+        adi_virt_sens_SVM_noROIs (outPath, path_extdisc, 'low_gamma', 'virtsens')                   
+    end
 
 
 
@@ -585,29 +578,6 @@ ListSubj(1:2) = [];
 
 
 
-%% adi recoding of responses: da einige Probanden bei einigen Fußbällen sowohl like, dislike, und dontcare angegeben haben, werden diese
-% Ball-Antworten recodiert und in die Kategorie "dontcare" zugeordnet.
-% Beispiel: nl_adi_04 beurteilte den rwv-Ball mal positiv (like), mal
-% negativ(dislike) => Antworten und Stimuli des rwv-Balls werden in die
-% Kategorie 'dontcare' verschoben
-
-fieldtrippath = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
-
-subjects = {'nl_adi_04'; 'nl_adi_05'; 'nl_adi_08'; 'nl_adi_12'; 'nl_adi_17'};
-ball_combinations2recode.nl_adi_04 = {'rwv', 'gbf'};
-ball_combinations2recode.nl_adi_05 = {'rwv', 'ggs', 'gbf'};
-ball_combinations2recode.nl_adi_08 = {'rwv', 'rws', 'rwf'};
-ball_combinations2recode.nl_adi_12 = {'ggf', 'rwf'};
-ball_combinations2recode.nl_adi_17 = {'ggf', 'ggv'};
-
-% triggercodes = cell(9,2);
-
-triggercodepattern = {'gbv', 'rws', 'rwf', 'ggv', 'gbs', 'gbf', 'rwv', 'ggs', 'ggf'}; 
-triggercodes = {'102', '104', '106', '108', '4196', '4198', '4200', '4202', '4204'};
-
-% adi_recoding_of_responses(fieldtrippath, subjects, ball_combinations2recode, triggercodes, triggercodepattern, num2str(1));
-% adi_recoding_of_responses(fieldtrippath, subjects, ball_combinations2recode, triggercodes, triggercodepattern, num2str(2));
-adi_recoding_of_responses(fieldtrippath, subjects, ball_combinations2recode, triggercodes, triggercodepattern, num2str(3));
 
 %% SANITY CHECK: teilweise sehen SVM-Ergebnisse (ohne ROIs) merkwürdig aus, deshalb diese function
 clear 
@@ -625,10 +595,9 @@ path2atlas = ('\\nas-fa0efsusr1\herfurkn1\My Documents\MATLAB\atlas_source_indic
 
 
 
-%% SVM based on virtual sensors per Subject and run - lcmv Beamformer
-% calculations of spatial filter, multiplies it with avgdata and runs Support
-% Vector machine
-% hier morgen weitermachen: 5 trials mitteln! ROI-Analyse
+%% lcmv Beamformer
+% calculations of spatial filter, multiplies it with avgdata 
+% extracts mean and max of each ROI
 fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
 ListSubj = dir(fieldtripPath);
 ListSubj(1:2) = [];
@@ -647,21 +616,62 @@ for i = 1:length(ListSubj)
    
 end
 
-%% passt Datenstruktur an LibSVM bzw. Python an
+%% passt Datenstruktur an LibSVM bzw. Python an udn führt Guggenmos Machine Learning durch (vergleich von oben)
+% schließt an adi_spatial_filter_perRun_ROIs_all90.m an
+fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+ListSubj = dir(fieldtripPath);
+ListSubj(1:2) = [];
+ for i = 3:length(ListSubj) 
+        outPath_extdisc = (['E:\Adidas\fieldtrip_Auswertung\single_subjects\'  ListSubj(i).name filesep]);  
+        path2data = [outPath_extdisc 'MEG\sourcespace\'];
+        sessions = [];
+        conditions = {'like'; 'dislike'; 'dontcare'};
+        freqbands = { 'delta'; 'theta'; 'alpha'; 'beta'; 'low_gamma'};
+        [session] = adi_append_virtsens_all90ROIs_all_freqbands(sessions, path2data, outPath_extdisc, freqbands, conditions, 'mean');
+        adi_svm_matlab_all_freqbands (session, outPath_extdisc)% => noch nicht fertig
+        Guggenmos_machineLearning_all90ROIs(session, outPath_extdisc) % => kommen leider merkwürdige Ergebnisse raus
+            
+ end
+  
+ %% passt Datenstruktur an LibSVM bzw. Python an udn führt Guggenmos Machine Learning durch (vergleich von oben)
+  % funktioniert super 
+fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+ListSubj = dir(fieldtripPath);
+ListSubj(1:2) = [];
+condition = {'like'; 'dislike'; 'dontcare'};
+ for i = 4:length(ListSubj) 
+        outPath_extdisc = (['E:\Adidas\fieldtrip_Auswertung\single_subjects\'  ListSubj(i).name filesep]);  
+        path2data = [outPath_extdisc 'MEG\sourcespace\'];
+        Guggenmos_machineLearning_noROIs(path2data, outPath_extdisc, 'bp1-45Hz', condition)
+        Guggenmos_machineLearning_noROIs(path2data, outPath_extdisc, 'alpha', condition)
+        Guggenmos_machineLearning_noROIs(path2data, outPath_extdisc, 'delta', condition)
+        Guggenmos_machineLearning_noROIs(path2data, outPath_extdisc, 'theta', condition)
+        Guggenmos_machineLearning_noROIs(path2data, outPath_extdisc, 'low_gamma', condition)
+        Guggenmos_machineLearning_noROIs(path2data, outPath_extdisc, 'beta', condition)
+ end
+ 
+ %% noch schreibne
+ 
 
 fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
 ListSubj = dir(fieldtripPath);
 ListSubj(1:2) = [];
- for i = 9: length(ListSubj) 
-        outPath_extdisc = (['L:\Arbeit\Adidas\fieldtrip_Auswertung\single_subjects\'  ListSubj(i).name filesep]);  
+condition = {'like'; 'dislike'; 'dontcare'};
+ for i = 1:length(ListSubj) 
+        outPath_extdisc = (['E:\Adidas\fieldtrip_Auswertung\single_subjects\'  ListSubj(i).name filesep]);  
         path2data = [outPath_extdisc 'MEG\sourcespace\'];
-%         Guggenmos_machineLearning2(path2data, outPath_extdisc, 'bp1-45Hz', 'like', 'dislike', 'dontcare', 'mean')
-        Guggenmos_machineLearning2(path2data, outPath_extdisc, 'alpha', 'like', 'dislike', 'dontcare', 'mean')
-        Guggenmos_machineLearning2(path2data, outPath_extdisc, 'delta', 'like', 'dislike', 'dontcare', 'mean')
-        Guggenmos_machineLearning2(path2data, outPath_extdisc, 'theta', 'like', 'dislike', 'dontcare', 'mean')
-        Guggenmos_machineLearning2(path2data, outPath_extdisc, 'low_gamma', 'like', 'dislike', 'dontcare', 'mean')
-        Guggenmos_machineLearning2(path2data, outPath_extdisc, 'beta', 'like', 'dislike', 'dontcare', 'mean')
+        adi_SVM_matlab(path2data, outPath_extdisc, 'bp1-45Hz', condition)
+        adi_SVM_matlab(path2data, outPath_extdisc, 'alpha', condition)
+        adi_SVM_matlab(path2data, outPath_extdisc, 'delta', condition)
+        adi_SVM_matlab(path2data, outPath_extdisc, 'theta', condition)
+        adi_SVM_matlab(path2data, outPath_extdisc, 'low_gamma', condition)
+        adi_SVM_matlab(path2data, outPath_extdisc, 'beta', condition)
  end
+
+ 
+ 
+ 
+ 
  %%
 fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
 ListSubj = dir(fieldtripPath);
@@ -670,7 +680,7 @@ bp = {'delta', 'theta', 'alpha', 'beta', 'low_gamma'};
 cond = { 'like', 'dislike', 'dontcare'}; 
 meanmax = 'mean';
 
- for i = 1 : length(ListSubj) 
+ for i = 3 : length(ListSubj) 
         outPath_extdisc = (['L:\Arbeit\Adidas\fieldtrip_Auswertung\single_subjects\'  ListSubj(i).name filesep]);  
         path2data = [outPath_extdisc 'MEG\sourcespace\'];
         Guggenmos_machineLearning_allfreqbands(path2data, bp, cond, meanmax)

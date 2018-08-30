@@ -2,7 +2,7 @@
 
 function [Condition1vs2] = adi_virt_sens_SVM (outPath, path_extdisc, freqbandname, cfg_virtsens)
 
-load ('\\nas-fa0efsusr1\herfurkn1\My Documents\MATLAB\atlas_source_indices.mat')
+
 outPath_SVM_results_dmlt = [outPath 'SVM_results_dmlt\'];
 if ~exist(outPath_SVM_results_dmlt, 'dir')
     mkdir(outPath_SVM_results_dmlt)
@@ -17,30 +17,6 @@ data_all_conditions = vs_allRuns;
 clear vs_allRuns
 conditions = fields(data_all_conditions);
 
-%% ROIs extrahieren:
-for m=1:length(atlas_downsampled.sources_roi_numbers)
-    temp(m,1)=atlas_downsampled.sources_roi_numbers{m,1};
-    temp(m,2) = m;
-end
-ROIs_sorted = sortrows(temp);
-
-for k = 1:size(conditions,1)
-    for m=1:length(atlas_downsampled.tissuelabel)
-        index_tissuelabel = find (ROIs_sorted(:,1)==m)
-        index_sources = ROIs_sorted(index_tissuelabel,2);
-        for j = 1:length(data_all_conditions.(conditions{1}).trial)
-            vs_roi.trial{1,j} = data_all_conditions.(conditions{1}).trial{1,j}(index_sources,:);
-        end
-        vs_roi.time = data_all_conditions.(conditions{1}).time;
-        vs_roi.label = num2cell(index_sources);
-        cfg = []; 
-        avg = ft_timelockanalysis(cfg, vs_roi); 
-        % hier SVM? evtl. zu wenig daten => auch möglich, alle
-        % frequenzbänder in SVM einzubeziehen 
-        % evtl. avg und figure für alle ROIs?
-        % hier weitermachen
-    end
-end
 
 
 

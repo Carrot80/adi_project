@@ -61,11 +61,10 @@ if isempty (data_all_conditions)
     data_all_conditions = vs_allRuns;
 end
 
-
+conditions = fields(vs_allRuns);
 cfg             = [];
 cfg.parameter   = 'trial';
 cfg.keeptrials  = 'yes'; % classifiers operate on individual trials
-cfg.vartrllength = 2;
 switch size(fields(data_all_conditions), 1)
     case 3
         tCondition.(conditions{1}) = ft_timelockanalysis(cfg, data_all_conditions.(conditions{1}));

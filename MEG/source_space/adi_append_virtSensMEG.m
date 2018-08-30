@@ -14,12 +14,13 @@ function [vs_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname, cfg_
 if ~exist([outPath 'MEG\sourcespace\noROIs\runs_appended\virtsens\' cfg_virtsens '_all_conditions_allRuns_', freqname, '.mat'], 'file')
     vs_allRuns = [];
     spatialfilter = {};
+
     for j = 1:size(condition,2)
         fileName = ([condition{j} '*.mat']);
         files = dir(fullfile(path2data, fileName));
         size_files = size(files);
 
-        for i = 1:(size_files(1,1))
+        for i = 1:size_files(1,1)
             load ([path2data files(i).name]);
 
             [data_bpfreq] = adi_bpfilter(cleanMEG_interp, freqname);
@@ -89,8 +90,9 @@ if ~exist([outPath 'MEG\sourcespace\noROIs\runs_appended\virtsens\' cfg_virtsens
             clear virtsens data_bpfreq cleanMEG_interp vs_euclid_norm
 
         end
-    end
-
+    end 
+    condition = fields(files2append);
+    
     for k = 1:size(fields(files2append),1)
         switch size(fields(files2append.(condition{k})),1)
             case 3 
@@ -105,7 +107,7 @@ if ~exist([outPath 'MEG\sourcespace\noROIs\runs_appended\virtsens\' cfg_virtsens
     end
     
     % sanity check Nr. 2:
-    condition = fields(files2append);
+   
     cfg = [];
     for m = 1:size(fields(vs_allRuns),1)
         avg = ft_timelockanalysis(cfg, vs_allRuns.(condition{m}));
@@ -181,13 +183,13 @@ for k = 1:length(data_bpfreq.trial)
     data_bpfreq.grad.tra(249:end, :) = [];
     data_bpfreq.label(249:end) = [];
 end
-if 3053 ==length(data_bpfreq.time{1,1}) 
-    for k = 1:length(data_bpfreq.trial)
-        data_bpfreq.trial{1,k}(:,1) = [];
-        data_bpfreq.time{1,k}(:,1) = [];
+
+for m = 1:length(data_bpfreq.trial)
+    if 3053 == length(data_bpfreq.time{1,m}) 
+        data_bpfreq.trial{1,m}(:,1) = [];
+        data_bpfreq.time{1,m}(:,1) = [];
     end
 end
-
 cfg =[];
 cfg.resamplefs = 256;
 cfg.detrend = 'no';
