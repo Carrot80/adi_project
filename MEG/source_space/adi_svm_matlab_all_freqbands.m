@@ -1,10 +1,99 @@
 
-
-
-
-function SVM_matlab(sessions, outPath)
+function SVM_matlab()
 rmpath('\\nas-fa0efsusr1\herfurkn1\My Documents\MATLAB\Bibliotheken\libsvm-3.23\libsvm-3.23\');
-num_conditions = length(unique(session.labels));
+data_fds = fileDatastore(fullfile('D:\Kirsten\virtsens_adi_06\virtsens\'),'ReadFcn',@load,'FileExtensions','.mat')
+t_data = tall(data_fds);
+num_conditions = size(fields(t_data.vs_allRuns),1);
+fieldnames =   fields(data1.vs_allRuns); 
+
+data1 = read(data_fds);
+
+
+
+num_conditions = size(fields(data1.vs_allRuns),1);
+fieldnames =   fields(data1.vs_allRuns);       
+
+if 3 == num_conditions
+    data = cat(2, data1.vs_allRuns.(condition{1}).trial, vs_allRuns.(condition{2}).trial, vs_allRuns.(condition{3}).trial);
+    session.labels = cat(2, ones(1,length(vs_allRuns.(condition{1}).trial)), 2*ones(1, length(vs_allRuns.(condition{2}).trial)), 3*ones(1, length(vs_allRuns.(condition{3}).trial)));
+elseif 2 == num_conditions
+    data = cat(2, vs_allRuns.(fieldnames{1}).trial, vs_allRuns.(fieldnames{2}).trial);
+    switch (fieldnames{1})
+        case 'like'
+            ind_field_1 = 1;
+        case 'dislike' 
+            ind_field_1 = 2;
+        case 'dontcare'
+            ind_field_1 = 3;
+    end
+        switch (fieldnames{2})
+            case 'like'
+                ind_field_2 = 1;
+            case 'dislike' 
+                ind_field_2 = 2;
+            case 'dontcare'
+                ind_field_2 = 3;
+        end       
+        session.labels = cat(2, ind_field_1*ones(1, length(vs_allRuns.(fieldnames{1}).trial)), ind_field_2*ones(1, length(vs_allRuns.(fieldnames{2}).trial)));
+    end
+    for i = 1:length(data)
+        temp = data{1,i};
+        session.data(i,:,:) = temp;
+    end
+    session.time = vs_allRuns.(fieldnames{1}).time;
+    if strcmp((freqname{k}), 'bp1-45Hz')
+        sessions.bp1_45Hz = session;
+    else
+        sessions.(freqname{k}) = session;
+    end
+    clear session vs_allRuns
+ end
+
+
+% data1 = read(fds);
+% data2 = read(fds);
+readall(data_fds); % read all data files
+dataarray = cell(numel(data_fds.Files), 1);
+i = 1;
+reset(data_fds);
+while hasdata(data_fds)
+    dataarray{i} = read(data_fds);
+    num_conditions1 = size(fields(dataarray{i}.vs_allRuns),1);
+    fieldnames1 =   fields(dataarray{i}.vs_allRuns);       
+
+    
+    
+    i = i+1;
+end
+
+%%
+
+rmpath('\\nas-fa0efsusr1\herfurkn1\My Documents\MATLAB\Bibliotheken\libsvm-3.23\libsvm-3.23\');
+data_fds = fileDatastore(fullfile('D:\Kirsten\virtsens_adi_06\virtsens\'),'ReadFcn',@load,'FileExtensions','.mat')
+data1 = read(fds);
+data2 = read(fds);
+readall(fds); % read all data files
+dataarray = cell(numel(fds.Files), 1);
+i = 1;
+reset(fds);
+while hasdata(fds)
+    dataarray{i} = read(fds);
+    i = i+1;
+end
+
+
+
+%% alle virtuellen sensoren als tall data einlesen 
+% oder einzeln un features extrahieren 
+%vorher sigma bilden
+
+
+
+X_train = (session.data(:,:, 150));
+X_train(:,541)=session.labels;
+%%
+
+um_conditions = length(unique(session.labels));
 data = sessions.data(:,:,150);
 data = data *10^11;
 data(:,451)=labels';

@@ -704,22 +704,23 @@ load('U:\My Documents\MATLAB\atlas_source_indices_without_cerebellum.mat');
  end
 
 %%
-clear
+
 fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
 ListSubj = dir(fieldtripPath);
 ListSubj(1:2) = [];
 condition = {'like'; 'dislike'; 'dontcare'};
 load('U:\My Documents\MATLAB\atlas_source_indices_all_clusters.mat');
 
+
  for i = 1:length(ListSubj) 
         outPath_extdisc = (['E:\Adidas\fieldtrip_Auswertung\single_subjects\'  ListSubj(i).name filesep]);  
         path2data = [outPath_extdisc 'MEG\sourcespace\'];
-        Guggenmos_machineLearning_clusters(path2data, outPath_extdisc, 'bp1-45Hz', condition, atlas)
-        Guggenmos_machineLearning_clusters(path2data, outPath_extdisc, 'alpha', condition, atlas)
-        Guggenmos_machineLearning_clusters(path2data, outPath_extdisc, 'delta', condition, atlas)
-        Guggenmos_machineLearning_clusters(path2data, outPath_extdisc, 'theta', condition, atlas)
-        Guggenmos_machineLearning_clusters(path2data, outPath_extdisc, 'low_gamma', condition, atlas)
-        Guggenmos_machineLearning_clusters(path2data, outPath_extdisc, 'beta', condition, atlas)
+        Guggenmos_machineLearning_clusters(path2data, outPath_extdisc, 'bp1-45Hz', condition, atl)
+        Guggenmos_machineLearning_clusters(path2data, outPath_extdisc, 'alpha', condition, atlas_indices_without_cerebellum)
+        Guggenmos_machineLearning_clusters(path2data, outPath_extdisc, 'delta', condition, atlas_indices_without_cerebellum)
+        Guggenmos_machineLearning_clusters(path2data, outPath_extdisc, 'theta', condition, atlas_indices_without_cerebellum)
+        Guggenmos_machineLearning_clusters(path2data, outPath_extdisc, 'low_gamma', condition, atlas_indices_without_cerebellum)
+        Guggenmos_machineLearning_clusters(path2data, outPath_extdisc, 'beta', condition, atlas_indices_without_cerebellum)
  end
 
 
