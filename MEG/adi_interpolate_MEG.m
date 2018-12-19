@@ -1,9 +1,14 @@
 function adi_interpolate_MEG (inPath, outPath)
 
 list = dir(fullfile([inPath, '*.mat'])); 
-for k = 6%:length(list)
+for k = 1:length(list)
 %     if ~exist([outPath, list(k).name], 'file');
         load([inPath list(k).name]); 
+        
+%         for p = 1:length(cleanMEG.trial)
+%             cleanMEG.trial{p}(249:end,:)=[];
+%         end
+%         cleanMEG.label(249:end)=[];
         [neighbours] = MEG_neighbours (cleanMEG); 
         close all
         cfgn                = [];
@@ -64,7 +69,10 @@ for k = 6%:length(list)
         if any(sum(pos))
             error('cleanMEG_interp still contains NaNs, check data')
         end
-   
+        cleanMEG_interp.trialinfo = cleanMEG.trialinfo;    
+        if ~exist(outPath, 'dir')
+            mkdir(outPath)
+        end
         save ([outPath, list(k).name], 'cleanMEG_interp'); 
         clearvars -except k list inPath outPath
 

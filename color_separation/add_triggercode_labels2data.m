@@ -1,23 +1,76 @@
-function [] = adi_recoding_of_responses(fieldtrippath, subjects, ball_combinations2recode, triggercodes, triggercodepattern, run)
+function [] = add_triggercode_labels(path2data, subject_list, color, triggercodes, triggercode_labels, run)
 
 
-for i = 5:length(subjects)
+for i = 1:length(subject_list)
     
-    fileList_Export_Bst2FT = dir(fullfile([fieldtrippath subjects{i} filesep 'MEG_EEG_input\noisereduced\1_95Hz\02_Export_Bst2FT\'], ['*ike500_' run '.mat'])); 
-    dontcare_new_trials = [];
-    for k=1:length(fileList_Export_Bst2FT)
-        
-        load([fieldtrippath subjects{i} filesep 'MEG_EEG_input\noisereduced\1_95Hz\02_Export_Bst2FT\' fileList_Export_Bst2FT(k).name], 'RetVal')
-        path_cleanMEG = [fieldtrippath subjects{i} filesep 'MEG_analysis\noisereduced\1_95Hz\01_clean\'];
-        load([path_cleanMEG 'alt\' fileList_Export_Bst2FT(k).name], 'cleanMEG')
-        
-        for j=1:length(ball_combinations2recode.(subjects{i}))
-            ind = char(triggercodes(find(strcmp(ball_combinations2recode.(subjects{i})(j), char(triggercodepattern)) == true)));
-            triggercodes2recode{j} = ind;
+    list_clean_data = dir(fullfile([path2data subject_list(i).name '\MEG_analysis\noisereduced\1_95Hz\01_clean\alt\'], ['*500_' run '.mat'])); 
+    fileList_Export_Bst2FT = dir(fullfile([path2data subject_list(i).name '\MEG_EEG_input\noisereduced\1_95Hz\02_Export_Bst2FT\'], ['*500_' run '.mat'])); 
+    for k=1:length(list_clean_data)
+        disp(['loading exported brainstorm file ' fileList_Export_Bst2FT(k).name ' of subject ' subject_list(i).name])
+        load([path2data subject_list(i).name filesep 'MEG_EEG_input\noisereduced\1_95Hz\02_Export_Bst2FT\' fileList_Export_Bst2FT(k).name], 'RetVal')
+        path_cleanMEG = [path2data subject_list(i).name filesep 'MEG_analysis\noisereduced\1_95Hz\01_clean\alt\'];
+        disp(['loading cleanMEG file ' list_clean_data(k).name ' of subject ' subject_list(i).name])
+        load([path_cleanMEG list_clean_data(k).name], 'cleanMEG')
+        if ~isfield(cleanMEG, 'trialinfo')
+            cleanMEG = setfield(cleanMEG, 'trialinfo', []);
         end
-
-        adi_recode(RetVal, cleanMEG, triggercodes2recode, run, path_cleanMEG, fileList_Export_Bst2FT(k).name, subjects{i}, triggercodes, triggercodepattern);
-      
+        
+        if isfield (cleanMEG, 'rejectedTrials') && ~isempty(cleanMEG.rejectedTrials)
+            RetVal.trial(cleanMEG.rejectedTrials) = [];
+        end
+        
+        if ~isequal(length(cleanMEG.trial), length(RetVal.trial))
+            warning('number of trials in cleanMEG and RetVal are not consistent')
+        end
+        for p = 1:length(cleanMEG.trial)
+            fprintf('p = %d\n', p);
+            if isequal(RetVal.trial{1,p}(1,:), cleanMEG.trial{1,p}(1,:)) 
+                cleanMEG.trialinfo.triggerchannel(p,:) = RetVal.trial{1,p}(272,1:3052); 
+                cleanMEG.trialinfo.responsechannel(p,:) = RetVal.trial{1,p}(273,1:3052); 
+                cleanMEG.trialinfo.triggerlabel(p) = max(RetVal.trial{1,p}(272,950:1010));
+                cleanMEG.trialinfo.response(p) = max(RetVal.trial{1,p}(273,:));
+                switch cleanMEG.trialinfo.response(p)
+                	case 32
+                        cleanMEG.trialinfo.response_label{p} = 'dislike';
+                    case 16
+                          cleanMEG.trialinfo.response_label{p} = 'like';
+                    case 64
+                        cleanMEG.trialinfo.response_label{p} = 'dontcare';
+                    otherwise
+                        cleanMEG.trialinfo.response_label{p} = 'unknown';
+                end
+            else
+               warning(['channel 1 of RetVal.trial and cleanMEG.trial in trials no. ' num2str(p) '  have different values']) 
+              ind = zeros(1,length(RetVal.trial));
+               for op = 1:length(RetVal.trial)
+                temp(op) = isequal(cleanMEG.trial{1,p}(1,:), RetVal.trial{1,op}(1,:));
+               end
+               ind = find(temp);
+               clear temp;
+               if isempty(ind)
+                  save ([path_cleanMEG 'incomplete_' list_clean_data(k).name ], 'cleanMEG' )
+                  break
+               end
+               cleanMEG.trialinfo.triggerchannel(p,:) = RetVal.trial{1,ind}(272,:); 
+               cleanMEG.trialinfo.responsechannel(p,:) = RetVal.trial{1,ind}(273,:); 
+               cleanMEG.trialinfo.triggerlabel(p) = max(RetVal.trial{1,ind}(272,950:1010));
+               cleanMEG.trialinfo.response(p) = max(RetVal.trial{1,ind}(273,:));
+               clear ind;
+               switch cleanMEG.trialinfo.response(p)
+                	case 32
+                        cleanMEG.trialinfo.response_label{p} = 'dislike';
+                    case 16
+                          cleanMEG.trialinfo.response_label{p} = 'like';
+                    case 64
+                        cleanMEG.trialinfo.response_label{p} = 'dontcare';
+                    otherwise
+                        cleanMEG.trialinfo.response_label{p} = 'unknown';
+               end
+            end
+        end
+        
+        save ([path_cleanMEG list_clean_data(k).name], 'cleanMEG' )
+        clear cleanMEG RetVal   
     end
         
 end
@@ -26,7 +79,7 @@ end
 end
 
 
-function adi_recode(RetVal, cleanMEG, triggercodes2recode, run, path_cleanMEG, condition, subject, triggercodes, triggercodepattern)
+function adi_recode(RetVal, cleanMEG, color, run, path_cleanMEG, condition, subject, triggercodes, triggercode_labels)
 
 [trl_like_orig, trl_dislike_orig, trl_dontcare_orig, trl_all_orig] = adi_trialdef (subject, run);
 
@@ -179,30 +232,4 @@ clear cleanMEG
 cleanMEG = dontcare_integ.cleanMEG;
 save ([path_cleanMEG 'dontcare500_' run '.mat'], 'cleanMEG' )
 
-end
-
-function [trl_like, trl_dislike, trl_dontcare, trl_all] = adi_trialdef (subject, run)
-  
-  switch subject
-      case 'nl_adi_04'
-          dataset =  (['F:\Franzi\MEG_EEG data\nl_adi_04_Gul\Gul_MEG\' run '\c,rfhp0.1Hz,n']);
-      case 'nl_adi_05'
-          dataset =  (['F:\Franzi\MEG_EEG data\nl_adi_05_Tröger\nl_adi_05_MEG\' run '\c,rfhp0.1Hz,n']);
-      case 'nl_adi_08'
-          dataset =  (['F:\Franzi\MEG_EEG data\nl_adi_08_Akbala\nl_adi_08\' run '\c,rfhp0.1Hz,n']);
-      case 'nl_adi_12'
-          dataset =  (['F:\Franzi\MEG_EEG data\nl_adi_12_Sperber\nl_adi_12\' run '\c,rfhp0.1Hz,n']);
-      case 'nl_adi_17'
-          if 1==strcmp(run, '2') 
-              dataset =  ('F:\Franzi\MEG_EEG data\nl_adi_17_Bal\Bal_MEG\3\c,rfhp0.1Hz,n');
-          elseif 1==strcmp(run, '3') 
-              dataset =  ('F:\Franzi\MEG_EEG data\nl_adi_17_Bal\Bal_MEG\4\c,rfhp0.1Hz,n');
-          else
-              dataset =  ('F:\Franzi\MEG_EEG data\nl_adi_17_Bal\Bal_MEG\1\c,rfhp0.1Hz,n');
-          end
-  end
-        
-[samples, values, followingResponse] = adi_corrected_triggers_neu(dataset)
-[trl_like, trl_dislike, trl_dontcare, trl_all] = kh_trialfun_fieldtrip (samples, values, followingResponse) 
-        
 end

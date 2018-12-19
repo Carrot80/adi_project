@@ -1,18 +1,19 @@
 
- function []= main(path2data, outPath_extdisc, freqname, condition)
+ function [virtsens_all_subjects]= main(virtsens_all_subjects, path2data, freqname, condition, atlas, i)
 
- [session] = mk_SVM_struct([], path2data, outPath_extdisc, freqname, condition);
- SVM_Guggenmos_tutorial(session, outPath_extdisc, freqname, condition)
+ [session] = mk_SVM_struct([], path2data, freqname, condition, atlas);
  
-%   save ([outPath 'MEG\sourcespace\runs_appended\virtsens\' cfg_virtsens '_' condition '_allRuns_', freqname, '.mat'], 'vs_allRuns', '-v7.3');
+ virtsens_all_subjects(i) = session;
+ clear session
+ 
  end
  
  
- function [session] = mk_SVM_struct(session, path2data, outPath_extdisc, freqname, condition)
+ function [session] = mk_SVM_struct(session, path2data, freqname, condition, atlas)
  
- fileName = [outPath_extdisc 'MEG\sourcespace\noROIs\runs_appended\virtsens\virtsens_all_conditions_allRuns_', freqname, '.mat'];
+ fileName = [path2data '\noROIs\runs_appended\virtsens\virtsens_all_conditions_allRuns_', freqname, '.mat'];
  if ~exist(fileName, 'file')
-    [vs_allRuns] = adi_appendvirtsensMEG(path2data, outPath_extdisc, freqname, condition);
+    [vs_allRuns] = adi_appendvirtsensMEG(path2data, freqname, condition);
  else 
     load (fileName)
  end
@@ -48,6 +49,8 @@ for i = 1:length(data)
     temp = data{1,i};
     session.data(i,:,:) = temp;
 end
+clear data
+session.data = session.data(:,cell2mat(atlas(:,3)),:);
 session.time = vs_allRuns.(fieldnames{1}).time;
 
 end
@@ -56,7 +59,11 @@ end
 
      
  %%
-function [] = SVM_Guggenmos_tutorial(sessions, outPath, freq, condition)
+function [] = SVM_Guggenmos_tutorial(sessions, outPath, freq, condition, atlas)
+
+% delete cerebellum
+atlas_indices = cell2mat(atlas(:,3));
+sessions.data = sessions.data(:, atlas_indices,:);
 
 % We set a seed, in order to make analyses reproducible:
 rng('default');
@@ -207,8 +214,9 @@ n_sessions = length(sessions);
     result.like = '1';
     result.dislike = '2';
     result.dontcare = '3';
+    result.atlas = atlas;
     
-    fn_outPath = [outPath 'MEG\sourcespace\all_voxels_without_cerebellum\Guggenmos_decoding_results\'];
+    fn_outPath = [outPath 'MEG\sourcespace\all_clusters\Guggenmos_decoding_results\'];
     if ~exist (fn_outPath, 'dir')
         mkdir (fn_outPath)
     end
@@ -226,7 +234,7 @@ if 3 == length(conditions)
     xlim([-0.5 1])
     xlabel('Time [s]');
     ylabel('Classification accuracy svm');
-    savefig([outPath 'MEG\sourcespace\all_voxels_without_cerebellum\Guggenmos_decoding_results\decoding_result_' freq '_svm.fig'])
+    savefig([outPath 'MEG\sourcespace\all_clusters\Guggenmos_decoding_results\decoding_result_' freq '_svm.fig'])
     close
     figure; axis tight
     hold on
@@ -238,7 +246,7 @@ if 3 == length(conditions)
     xlabel('Time [s]')
     ylabel('Classification accuracy weird')
     legend('like vs dislike', 'like vs dontcare', 'dislike vs dontcare')
-    savefig([outPath 'MEG\sourcespace\all_voxels_without_cerebellum\Guggenmos_decoding_results\decoding_result_' freq '_weird.fig'])
+    savefig([outPath 'MEG\sourcespace\all_clusters\Guggenmos_decoding_results\decoding_result_' freq '_weird.fig'])
     close
     figure; axis tight
     hold on
@@ -250,7 +258,7 @@ if 3 == length(conditions)
     xlabel('Time [s]')
     ylabel('Classification accuracy gnb')
     legend('like vs dislike', 'like vs dontcare', 'dislike vs dontcare')
-    savefig([outPath 'MEG\sourcespace\all_voxels_without_cerebellum\Guggenmos_decoding_results\decoding_result_' freq '_gnb.fig'])
+    savefig([outPath 'MEG\sourcespace\all_clusters\Guggenmos_decoding_results\decoding_result_' freq '_gnb.fig'])
     close
 else
     figure; axis tight
@@ -263,7 +271,7 @@ else
     xlabel('Time [s]')
     ylabel('Classification accuracy')
     legend('SVM', 'WeiRD', 'GNB')
-    savefig([outPath 'MEG\sourcespace\all_voxels_without_cerebellum\Guggenmos_decoding_results\decoding_result_' freq 'SVM_WeiRD_BNB.fig'])
+    savefig([outPath 'MEG\sourcespace\all_clusters\Guggenmos_decoding_results\decoding_result_' freq 'SVM_WeiRD_BNB.fig'])
 end
 
 % Already for one participant and a reduced data set (10 insteada of 92 conditions), these results look 
@@ -273,7 +281,7 @@ end
  %%
  
 
-function [vs_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname, condition)
+function [vs_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname, condition, atlas)
 
 % append Runs 
 % Channels   --> Configuration of Brainstorm MEG Channels    
@@ -391,13 +399,13 @@ if ~exist([outPath 'MEG\sourcespace\noROIs\runs_appended\virtsens\virtsens_all_c
     save ([outPath 'MEG\sourcespace\all_voxels_without_cerebellum\runs_appended\virtsens\' cfg_virtsens '_all_conditions_allRuns_', freqname, '.mat'], 'vs_allRuns', '-v7.3');
 
 else
-%     vs_allRuns = [];
+    vs_allRuns = [];
     %load ([outPath 'MEG\sourcespace\all_voxels_without_cerebellum\runs_appended\virtsens\' cfg_virtsens '_all_conditions_allRuns_', freqname, '.mat'], 'vs_allRuns');
 end
 
 
-session.data = session.data(:, 92:end,:);
-session.atlas = atlas_without_cerebellum;
+% session.data = session.data(:, 92:end,:);
+% session.atlas = atlas;
 end
 
 

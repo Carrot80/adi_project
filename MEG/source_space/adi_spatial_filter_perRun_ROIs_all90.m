@@ -4,9 +4,9 @@ function adi_source_ROI (path2vol, path2data, mriPath, outPath_extdisc, freqband
 % calculations spatial filter per Run and Subject, 
 
 %% run 1:
-if ~exist([outPath_extdisc 'MEG\sourcespace\allRois\run1\vs_mean_all_rois_' dislike '_' freqbandname '.mat'], 'file')
+% if ~exist([outPath_extdisc 'MEG\sourcespace\allRois\run1\vs_mean_all_rois_' dislike '_' freqbandname '.mat'], 'file')
     adi_source_reconstruction_virt_sens(path2vol, path2data, mriPath,  num2str(1), freqbandname, like, dislike, dontcare, outPath_extdisc)                                                                   
-end
+% end
 
 %% run2:
 
@@ -129,12 +129,12 @@ hold on
 data_bpfreq.grad = ft_convert_units(data_appended.grad, 'cm');
 hold on
 ft_plot_sens(data_bpfreq.grad);
-pathFig = [outPath_extdisc 'run' run]; 
-if ~exist(pathFig, 'dir')
-    mkdir(pathFig)
-end
-savefig([pathFig '\sensor_position_check.fig'])
-close all
+% pathFig = [outPath_extdisc 'run' run]; 
+% if ~exist(pathFig, 'dir')
+%     mkdir(pathFig)
+% end
+% savefig([pathFig '\sensor_position_check.fig'])
+% close all
 
 cfg             = [];
 cfg.grid        = sourcemodel_inversewarped;
@@ -212,6 +212,7 @@ for k = 1:length(atlas_downsampled2source_avg.tissuelabel)
         for i = 1:length(data_like_bpfreq.trial)
             virtsens_roi_like.trial{i} = filter_ROI2*data_like_bpfreq.trial{i};
         end
+        
 %         % noise abziehen: Mittelwert von kompletten Filter abziehen?
 %         ind_filter = find(source_avg.inside);
 %         spatialfilter_inside = source_avg.avg.filter(ind_filter,1);

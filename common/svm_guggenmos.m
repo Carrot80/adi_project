@@ -1,22 +1,44 @@
-
  %%
-function [] = SVM_Guggenmos_tutorial(session, outPath, freq, meanmax)
-% We set a seed, in order to make analyses reproducible:
+function [] = SVM_Guggenmos_tutorial(sessions, outPath, freq, condition, atlas)
 
+% We set a seed, in order to make analyses reproducible:
 rng('default');
 rng(10);
+% 
 
+for k=1:length(sessions.label)
+    switch sessions.label{k}
+        case 'like' % 'Volley'
+            sessions.labels(k) = 1;
+        case 'dislike' % 'Space'
+            sessions.labels(k) = 2;
+        case 'dontcare' % 'Soccer'
+            sessions.labels(k) = 3;
+    end
+end
+
+% for k=1:length(sessions.label)
+%     switch sessions.label{k}
+%         case 'Volley'
+%             sessions.labels(k) = 1;
+%         case 'Space'
+%             sessions.labels(k) = 2;
+%         case 'Soccer'
+%             sessions.labels(k) = 3;
+%     end
+% end
 % Now we set some parameters. Only the number of permutations and 
 % the number of pseudo-trials are free parameters. The number of conditions, 
 % sensors, time points and sessions are derived from the data (i.e., from the sessions variable above).
 
 % Parameters
-n_perm = 20;  % number of permutations, default = 20
+n_perm = 10;  % number of permutations
 n_pseudo = 5;  % number of pseudo-trials % evtl. erhöhen auf 10?
-n_conditions = length(unique(session(1).labels));
-n_sensors = size(session(1).data, 2);
-n_time = size(session(1).data, 3);
-n_session = length(session);
+
+n_conditions = length(unique(sessions(1).response_label));
+n_sensors = size(sessions(1).data, 2);
+n_time = size(sessions(1).data, 3);
+n_sessions = length(sessions);
 
 % The analytic logic is contained in a nested for loop, with loops for the number of sessions, 
 % number of permutations, number of timepoints, number of conditions, and number of conditions again. 
@@ -37,14 +59,14 @@ n_session = length(session);
     % Gaussian Naive Bayes
     clfs = {'svm', 'gnb', 'weird'};
     for c = 1:length(clfs)
-        result.(clfs{c}) = nan(n_session, n_perm, n_conditions, n_conditions, n_time);
+        result.(clfs{c}) = nan(n_sessions, n_perm, n_conditions, n_conditions, n_time);
     end
-    for s = 1:n_session
+    for s = 1:n_sessions
 
-        fprintf('session %g / %g\n', s, n_session)
+        fprintf('sessions %g / %g\n', s, n_sessions)
 
-        X = session(s).data;
-        y = session(s).labels;
+        X = sessions(s).data;
+        y = sessions(s).labels;
         
         conditions = unique(y);
         n_trials = histc(y, conditions);
@@ -98,22 +120,22 @@ n_session = length(session);
 
 
             % 2. Whitening using the Epoch method
-            sigma_conditions = reshape(squeeze(labels_pseudo_train(1,:,n_pseudo:end))',1,[]);
-            sigma_ = nan(n_conditions, n_sensors, n_sensors);
-            for c = 1:n_conditions
-                % compute sigma for each time point, then average across time
-                tmp_ = nan(n_time, n_sensors, n_sensors);
-                for t = 1:n_time
-                    tmp_(t, :, :) = cov1para(Xpseudo_train(sigma_conditions==c, :, t));
-                end
-                sigma_(c, :, :) = mean(tmp_, 1);
-            end
-            sigma = squeeze(mean(sigma_, 1));  % average across conditions
-            sigma_inv = sigma^-0.5;
-            for t = 1:n_time
-                Xpseudo_train(:, :, t) = squeeze(Xpseudo_train(:, :, t)) * sigma_inv;
-                Xpseudo_test(:, :, t) = squeeze(Xpseudo_test(:, :, t)) * sigma_inv;
-            end
+%             sigma_conditions = reshape(squeeze(labels_pseudo_train(1,:,n_pseudo:end))',1,[]);
+%             sigma_ = nan(n_conditions, n_sensors, n_sensors);
+%             for c = 1:n_conditions
+%                 % compute sigma for each time point, then average across time
+%                 tmp_ = nan(n_time, n_sensors, n_sensors);
+%                 for t = 1:n_time
+%                     tmp_(t, :, :) = cov1para(Xpseudo_train(sigma_conditions==c, :, t));
+%                 end
+%                 sigma_(c, :, :) = mean(tmp_, 1);
+%             end
+%             sigma = squeeze(mean(sigma_, 1));  % average across conditions
+%             sigma_inv = sigma^-0.5;
+%             for t = 1:n_time
+%                 Xpseudo_train(:, :, t) = squeeze(Xpseudo_train(:, :, t)) * sigma_inv;
+%                 Xpseudo_test(:, :, t) = squeeze(Xpseudo_test(:, :, t)) * sigma_inv;
+%             end
 
             for t = 1:n_time
                 for c1 = 1:n_conditions-1
@@ -121,7 +143,7 @@ n_session = length(session);
                         % 3. Fit the classifier using training data
                         data_train = Xpseudo_train(ind_pseudo_train(c1, c2, :), :, t);
                         y_train = squeeze(labels_pseudo_train(c1, c2, :));
-                        model_svm = svmtrain(y_train, data_train, '-c 1 -q 0 -t 0'); % libSVM: -c cost : set the parameter C of C-SVC, epsilon-SVR, and nu-SVR (default 1)\n"; -q : quiet mode (no outputs)\; "-t kernel_type : set type of kernel function (default 2)\n"   
+                        model_svm = svmtrain(y_train, data_train, '-c 1 -q 0 -t 0'); % libSVM: -c cost : set the parameter C of C-SVC, epsilon-SVR, and nu-SVR (default 1)\n"; -q : quiet mode (no outputs)\; "-t kernel_type : set type of kernel function (default 2)\n"                       
                         model_weird = weirdtrain(y_train, data_train);
                         model_gnb = gnbtrain(y_train, data_train);
 
@@ -133,7 +155,7 @@ n_session = length(session);
                         result.weird(s, f, c1, c2, t) = ...
                             mean(weirdpredict(y_train,data_test,model_weird)==y_train)-0.5;
                         result.gnb(s, f, c1, c2, t) = ...
-                            mean(gnbpredict(y_train,data_test,model_gnb)==y_train)-0.5;                                  
+                            mean(gnbpredict(y_train,data_test,model_gnb)==y_train)-0.5;
                     end
                 end
             end
@@ -141,80 +163,72 @@ n_session = length(session);
     end
     % average across permutations
     for c = 1:length(clfs)
-        result_.(clfs{c}) = nan(n_session, n_perm, n_conditions, n_conditions, n_time);
+        result_.(clfs{c}) = nan(n_sessions, n_perm, n_conditions, n_conditions, n_time);
     end 
     result_.svm = squeeze(nanmean(result.svm, 2));
     result_.gnb = squeeze(nanmean(result.gnb, 2));
     result_.weird = squeeze(nanmean(result.weird, 2));
-    result = result_; % result = 4D matrix; Beispiel: 2 *9*9*111 => 2 = Anzahl session, 9 = Anzahl an Bedingungen, 111 = Anzahl an Zeitpunkten
-    result.time = session.time;
-%     result.tissuelabel = session.tissuelabel;
-    result.like = '1';
-    result.dislike = '2';
-    result.dontcare = '3';
-    result.model.svm = model_svm;
-    result.model.weird = model_weird;
-%     result.ROIs = session.ROIs;
+    result = result_; % result = 4D matrix; Beispiel: 2 *9*9*111 => 2 = Anzahl sessions, 9 = Anzahl an Bedingungen, 111 = Anzahl an Zeitpunkten
+    result.time = sessions.time;
+    result.volley = '1';
+    result.space = '2';
+    result.soccer = '3';
     
-    
-    fn_outPath = [outPath 'Guggenmos_decoding_results\'];
-    if ~exist (fn_outPath, 'dir')
-        mkdir (fn_outPath)
+    if ~exist (outPath, 'dir')
+        mkdir (outPath)
     end
-    save([fn_outPath 'result_' meanmax '_' freq], 'result')
-% end
-
-% Now we plot the average classification accuracy time course by collapsing across session and conditions:
-
+    save([outPath 'result_decoding_' freq], 'result')
+    
+%% Now we plot the average classification accuracy time course by collapsing across sessions and conditions:
 if 3 == length(conditions) 
     figure; axis tight
     hold on
-    plot(session.time{1,1}, 100*squeeze(result.svm(1,2,:))+50, 'b-', 'linewidth', 1)
-    plot(session.time{1,1}, 100*squeeze(result.svm(1,3,:))+50, 'r-', 'linewidth', 0.5)
-    plot(session.time{1,1}, 100*squeeze(result.svm(2,3,:))+50, 'k-', 'linewidth',0.5)
+    plot(sessions.time{1,1}, 100*squeeze(result.svm(1,2,:))+50, 'b-', 'linewidth', 1, 'DisplayName','Volley vs Space'); %legend('like vs dislike');
+    plot(sessions.time{1,1}, 100*squeeze(result.svm(1,3,:))+50, 'r-', 'linewidth', 0.5, 'DisplayName', 'Volley vs Soccer');
+    plot(sessions.time{1,1}, 100*squeeze(result.svm(2,3,:))+50, 'k-', 'linewidth',0.5, 'DisplayName', 'Space vs Soccer');
+    legend('show')
     plot([-0.5 1], [50 50], 'k-')
     xlim([-0.5 1])
-    xlabel('Time [s]')
-    ylabel('Classification accuracy svm')
-    legend('like vs dislike', 'like vs dontcare', 'dislike vs dontcare')
-    savefig([fn_outPath meanmax '_' freq '_svm.fig'])
+    xlabel('Time [s]');
+    ylabel('Classification accuracy svm');
+    savefig([outPath 'decoding_result_' freq '_svm.fig'])
     close
     figure; axis tight
     hold on
-    plot(session.time{1,1}, 100*squeeze(result.weird(1,2,:))+50, 'b-', 'linewidth', 1)
-    plot(session.time{1,1}, 100*squeeze(result.weird(1,3,:))+50, 'r-', 'linewidth', 0.5)
-    plot(session.time{1,1}, 100*squeeze(result.weird(2,3,:))+50, 'k-', 'linewidth', 0.5)
+    plot(sessions.time{1,1}, 100*squeeze(result.weird(1,2,:))+50, 'b-', 'linewidth', 1)
+    plot(sessions.time{1,1}, 100*squeeze(result.weird(1,3,:))+50, 'r-', 'linewidth', 0.5)
+    plot(sessions.time{1,1}, 100*squeeze(result.weird(2,3,:))+50, 'k-', 'linewidth', 0.5)
     plot([-0.5 1], [50 50], 'k-')
     xlim([-0.5 1])
     xlabel('Time [s]')
     ylabel('Classification accuracy weird')
-    legend('like vs dislike', 'like vs dontcare', 'dislike vs dontcare')
-    savefig([fn_outPath meanmax '_' freq '_weird.fig'])
+    legend('Volley vs Space', 'Volley vs Soccer', 'Soccer vs Soccer')
+    savefig([outPath 'decoding_result_' freq '_weird.fig'])
     close
     figure; axis tight
     hold on
-    plot(session.time, 100*squeeze(result.gnb(1,2,:))+50, 'b-', 'linewidth', 1)
-    plot(session.time, 100*squeeze(result.gnb(1,3,:))+50, 'r-', 'linewidth', 0.5)
-    plot(session.time, 100*squeeze(result.gnb(2,3,:))+50, 'k-', 'linewidth', 0.5)
+    plot(sessions.time{1,1}, 100*squeeze(result.gnb(1,2,:))+50, 'b-', 'linewidth', 1)
+    plot(sessions.time{1,1}, 100*squeeze(result.gnb(1,3,:))+50, 'r-', 'linewidth', 0.5)
+    plot(sessions.time{1,1}, 100*squeeze(result.gnb(2,3,:))+50, 'k-', 'linewidth', 0.5)
     plot([-0.5 1], [50 50], 'k-')
     xlim([-0.5 1])
     xlabel('Time [s]')
     ylabel('Classification accuracy gnb')
-    legend('like vs dislike', 'like vs dontcare', 'dislike vs dontcare')
-    savefig([fn_outPath meanmax '_' freq '_gnb.fig'])
+      legend('Volley vs Space', 'Volley vs Soccer', 'Soccer vs Soccer')
+    savefig([outPath 'decoding_result_' freq '_gnb.fig'])
     close
 else
     figure; axis tight
     hold on
-    plot(session.time, 100*squeeze(nanmean(nanmean(result.svm, 1), 2))+50, 'linewidth', 1) % nanmean = mean ignoring nans
-    plot(session.time, 100*squeeze(nanmean(nanmean(result.weird, 1), 2))+50, 'linewidth', 1)
-    plot(session.time, 100*squeeze(nanmean(nanmean(result.gnb, 1), 2))+50, 'linewidth', 1)
+    plot(sessions.time{1,1}, 100*squeeze(nanmean(nanmean(result.svm, 1), 2))+50, 'linewidth', 1) % nanmean = mean ignoring nans
+    plot(sessions.time{1,1}, 100*squeeze(nanmean(nanmean(result.weird, 1), 2))+50, 'linewidth', 1)
+    plot(sessions.time{1,1}, 100*squeeze(nanmean(nanmean(result.gnb, 1), 2))+50, 'linewidth', 1)
     plot([-0.5 1], [50 50], 'k-')
     xlim([-0.5 1])
     xlabel('Time [s]')
     ylabel('Classification accuracy')
     legend('SVM', 'WeiRD', 'GNB')
-    savefig([fn_outPath meanmax '_' freq 'SVM_WeiRD_BNB''.fig'])
+    savefig([outPath 'MEG\sourcespace\noROIs\Guggenmos_decoding_results\decoding_result_' freq 'SVM_WeiRD_BNB.fig'])
 end
 
 % Already for one participant and a reduced data set (10 insteada of 92 conditions), these results look 
@@ -222,5 +236,3 @@ end
 
  end
  %%
- 
-

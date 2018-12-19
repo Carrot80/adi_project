@@ -50,6 +50,7 @@ for op = 1:length(fields(multibar))
     ylabel(['n subjects']);
     title(['like_vs_dislike_' fieldname{op}]);
     savefig([path2fig 'like_vs_dislike_' fieldname{op} '_' freq '.fig'])
+    close
 end
 
 end

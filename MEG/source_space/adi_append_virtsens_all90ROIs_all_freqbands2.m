@@ -1,19 +1,66 @@
 
-function  [virtsens_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname, cfg_virtsens, condition)
+ function []= main(path2data, outPath, freqname, condition)
 
+ [session] = mk_SVM_struct([], path2data, outPath_extdisc, freqname, condition);
 
- [virtsens_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname, cfg_virtsens, condition);
+ 
+%   save ([outPath 'MEG\sourcespace\runs_appended\virtsens\' cfg_virtsens '_' condition '_allRuns_', freqname, '.mat'], 'vs_allRuns', '-v7.3');
+ end
  
  
+ function [session] = mk_SVM_struct(session, path2data, outPath, freqname, condition)
+ 
+ fileName = [outPath 'MEG\sourcespace\noROIs\runs_appended\virtsens\virtsens_all_conditions_allRuns_', freqname, '.mat'];
+ if ~exist(fileName, 'file')
+    [vs_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname, condition);
+ else 
+    load (fileName)
+ end
+
+ 
+num_conditions = size(fields(vs_allRuns),1);
+fieldnames =   fields(vs_allRuns);       
+
+if 3 == num_conditions
+    data = cat(2, vs_allRuns.(condition{1}).trial, vs_allRuns.(condition{2}).trial, vs_allRuns.(condition{3}).trial);
+    session.labels = cat(2, ones(1,length(vs_allRuns.(condition{1}).trial)), 2*ones(1, length(vs_allRuns.(condition{2}).trial)), 3*ones(1, length(vs_allRuns.(condition{3}).trial)));
+elseif 2 == num_conditions
+    data = cat(2, vs_allRuns.(fieldnames{1}).trial, vs_allRuns.(fieldnames{2}).trial);
+    switch (fieldnames{1})
+        case 'like'
+            ind_field_1 = 1;
+        case 'dislike' 
+            ind_field_1 = 2;
+        case 'dontcare'
+            ind_field_1 = 3;
+    end
+    switch (fieldnames{2})
+        case 'like'
+            ind_field_2 = 1;
+        case 'dislike' 
+            ind_field_2 = 2;
+        case 'dontcare'
+            ind_field_2 = 3;
+    end       
+    session.labels = cat(2, ind_field_1*ones(1, length(vs_allRuns.(fieldnames{1}).trial)), ind_field_2*ones(1, length(vs_allRuns.(fieldnames{2}).trial)));
 end
+for i = 1:length(data)
+    temp = data{1,i};
+    session.data(i,:,:) = temp;
+end
+session.time = vs_allRuns.(fieldnames{1}).time;
 
-function [vs_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname, cfg_virtsens, condition)
+end
+  
+
+
+function [vs_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname, condition, atlas)
 
 % append Runs 
 % Channels   --> Configuration of Brainstorm MEG Channels    
-% if ~exist([outPath 'MEG\sourcespace\noROIs\runs_appended\virtsens\' cfg_virtsens '_all_conditions_allRuns_', freqname, '.mat'], 'file')
+if ~exist([outPath 'MEG\sourcespace\noROIs\runs_appended\virtsens\virtsens_all_conditions_allRuns_', freqname, '.mat'], 'file')
     vs_allRuns = [];
-    source_avg_appended_conditions = {};
+    spatialfilter = {};
 
     for j = 1:size(condition,2)
         fileName = ([condition{j} '*.mat']);
@@ -25,18 +72,19 @@ function [vs_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname, cfg_
 
             [data_bpfreq] = adi_bpfilter(cleanMEG_interp, freqname);
          
-            if ~isfield(source_avg_appended_conditions, (['run' num2str(i)]))
-                source_avg_appended_conditions.(['run' num2str(i)]) = load ([outPath 'MEG\sourcespace\spatialfilter\run' num2str(i) '\source_avg_appended_conditions_' freqname '.mat']);
-                source_avg_appended_conditions.(['run' num2str(i)]).spatialfilter = cat(1,source_avg_appended_conditions.(['run' num2str(i)]).source_avg.avg.filter{:});   
+            if ~isfield(spatialfilter, (['run' num2str(i)]))
+                spatialfilter.(['run' num2str(i)]) = load ([outPath 'MEG\sourcespace\spatialfilter\run' num2str(i) '\spatialfilter_loose_orientation_singletrials_' freqname '.mat']);
+                spatialfilter.(['run' num2str(i)]) = cat(1,spatialfilter.(['run' num2str(i)]).spatialfilter_orig{:});   
             end
 
-            % laut fieldtrip discussion list zuerst weights mit sensor data multiplizieren: https://mailman.science.ru.nl/pipermail/fieldtrip/2017-July/011661.html    
+                
             virtsens = [];
             for k = 1:length(data_bpfreq.trial)
-                virtsens.trial{k} = source_avg_appended_conditions.(['run' num2str(i)]).spatialfilter*data_bpfreq.trial{k};
+                virtsens.trial{k} = spatialfilter.(['run' num2str(i)])*data_bpfreq.trial{k};
             end
-       
-
+        
+            virtsens.time = data_bpfreq.time;
+            virtsens.fsample = data_bpfreq.fsample;
             for p = 1:length(virtsens.trial)
                 euclid_norm = zeros(length(virtsens.trial{1,p})/3, size(virtsens.trial{1,p}(1,:),2));
                 n = 1;
@@ -54,49 +102,39 @@ function [vs_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname, cfg_
                 virtsens.label{n,1}=num2str(n);
             end
             
-            
-            fn_data_bpfreq = fields(data_bpfreq);
-            fn_virtsens = fields(virtsens);
-            diff_fieldnames = setdiff(fn_data_bpfreq, fn_virtsens);
-
-            for k=1:length(diff_fieldnames)
-                virtsens.(diff_fieldnames{k}) = data_bpfreq.(diff_fieldnames{k}); 
-            end
-             
             % sanity check:
-            cfg = [];
+            cfg=[];
             avg = ft_timelockanalysis(cfg, virtsens);
             figure;
-            plot(virtsens.time{1,1}, avg.avg)
-            sanity_path = [outPath 'MEG\sourcespace\noROIs\sanity_check\'];
+            plot(virtsens.time{1,1}, mean(avg.avg))
+            sanity_path = [outPath 'MEG\sourcespace\all_voxels_without_cerebellum\sanity_check\'];
             if ~exist(sanity_path, 'dir')
                 mkdir (sanity_path)
             end
-            savefig([sanity_path 'virtsens_' files(i).name '_' freqname '.fig'])
+            savefig([sanity_path 'mean_virtsens_' files(i).name '_' freqname '.fig'])
             close
-
-        %% noise normalization nach Gespräch mit Stefan:
-        virtsens_ns = virtsens;
-        virtsens_ns = rmfield(virtsens_ns, 'trial');
-        for k = 1:length(virtsens.trial)
-            for p = 1:size(virtsens.trial{k},1)
-                virtsens_ns.trial{k}(p,:) = virtsens.trial{k}(p,:)/mean(virtsens.trial{k}(p,1:129));
-            end
-        end
+            
+         % siehe Skript von Yuval: => all will have a similar noise level
         
-        clearvars virtsens
-       
-        % sanity check nr. 2:
-        cfg = [];
-        avg_ns = ft_timelockanalysis(cfg, virtsens_ns);
-        figure;
-        plot(virtsens_ns.time{1,1}, avg_ns.avg)
-        savefig([sanity_path 'virtsens_ns_all_conditions_run' num2str(run) '_' freq '.fig'])
-        close
-  
-%%
-            files2append.(condition{j}).(['run' num2str(i)]) = virtsens_ns;
-            clear virtsens_ns data_bpfreq cleanMEG_interp vs_euclid_norm
+            if 1 == strcmp (cfg_virtsens, 'virtsens_ns')
+                ns = mean(abs(spatialfilter),2);
+
+                for k = 1:length(virtsens.trial)
+                    virtsens_ns.trial{k} = virtsens.trial{1,k}./repmat(ns,1,size(virtsens.trial{1,k},2)); % => all will have a similar noise level
+                end
+
+                virtsens_ns.time = virtsens.time;
+                virtsens_ns.fsample = virtsens.fsample;
+
+                for k = 1:length(virtsens_ns.trial{1}(:,1))
+                    virtsens_ns.label{k} = num2str(k);
+                end
+                virtsens = virtsens_ns;
+                clear virtsens_ns
+            end
+
+            files2append.(condition{j}).(['run' num2str(i)]) = virtsens;
+            clear virtsens data_bpfreq cleanMEG_interp vs_euclid_norm
 
         end
     end 
@@ -115,7 +153,7 @@ function [vs_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname, cfg_
         end
     end
     
-    % sanity check Nr. 3:
+    % sanity check Nr. 2:
    
     cfg = [];
     for m = 1:size(fields(vs_allRuns),1)
@@ -126,18 +164,21 @@ function [vs_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname, cfg_
         close
     end
     
-    pathAppended = [outPath '\MEG\sourcespace\noROIs\runs_appended\virtsens\'];
+    pathAppended = [outPath '\MEG\sourcespace\all_voxels_without_cerebellum\runs_appended\virtsens\'];
     if ~exist ( pathAppended, 'dir')
         mkdir (pathAppended)
     end
    
-    save ([outPath 'MEG\sourcespace\noROIs\runs_appended\virtsens\' cfg_virtsens '_all_conditions_allRuns_', freqname, '.mat'], 'vs_allRuns', '-v7.3');
+    save ([outPath 'MEG\sourcespace\all_voxels_without_cerebellum\runs_appended\virtsens\' cfg_virtsens '_all_conditions_allRuns_', freqname, '.mat'], 'vs_allRuns', '-v7.3');
 
-% else
-%     vs_allRuns = [];
-    %load ([outPath 'MEG\sourcespace\noROIs\runs_appended\virtsens\' cfg_virtsens '_all_conditions_allRuns_', freqname, '.mat'], 'vs_allRuns');
-% end
+else
+    vs_allRuns = [];
+    %load ([outPath 'MEG\sourcespace\all_voxels_without_cerebellum\runs_appended\virtsens\' cfg_virtsens '_all_conditions_allRuns_', freqname, '.mat'], 'vs_allRuns');
+end
 
+
+% session.data = session.data(:, 92:end,:);
+% session.atlas = atlas;
 end
 
 
@@ -177,7 +218,9 @@ end
 
 [data_bpfreq] = ft_preprocessing(cfg, filename);
 data_bpfreq.ChannelFlag_Bst = filename.ChannelFlag_Bst;
-
+if isfield(filename, 'trialinfo')
+    data_bpfreq.trialinfo = filename.trialinfo;
+end
 
 for k = 1:length(data_bpfreq.trial)
     data_bpfreq.trial{1,k} = data_bpfreq.trial{1,k}(1:248,:);
@@ -205,9 +248,7 @@ cfg.detrend = 'no';
 cfg =[];
 cfg.latency = [-0.5 1];
 data_bpfreq_res_sel = ft_selectdata(cfg, data_bpfreq_res);
-if isfield(filename, 'trialinfo')
-    data_bpfreq_res_sel.trialinfo = filename.trialinfo;
-end
+
        
 end
      

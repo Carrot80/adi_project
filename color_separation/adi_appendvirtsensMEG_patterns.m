@@ -53,16 +53,10 @@ function [vs_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname, cfg_
             for n = 1:length(virtsens.trial{1,1}(:,1))
                 virtsens.label{n,1}=num2str(n);
             end
+            virtsens.time = data_bpfreq.time;
+            virtsens.fsample = data_bpfreq.fsample;
+            virtsens.trialinfo = data_bpfreq.trialinfo;
             
-            
-            fn_data_bpfreq = fields(data_bpfreq);
-            fn_virtsens = fields(virtsens);
-            diff_fieldnames = setdiff(fn_data_bpfreq, fn_virtsens);
-
-            for k=1:length(diff_fieldnames)
-                virtsens.(diff_fieldnames{k}) = data_bpfreq.(diff_fieldnames{k}); 
-            end
-             
             % sanity check:
             cfg = [];
             avg = ft_timelockanalysis(cfg, virtsens);
@@ -72,31 +66,70 @@ function [vs_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname, cfg_
             if ~exist(sanity_path, 'dir')
                 mkdir (sanity_path)
             end
-            savefig([sanity_path 'virtsens_' files(i).name '_' freqname '.fig'])
+            savefig([sanity_path 'mean_virtsens_' files(i).name '_' freqname '.fig'])
             close
-
-        %% noise normalization nach Gespräch mit Stefan:
-        virtsens_ns = virtsens;
-        virtsens_ns = rmfield(virtsens_ns, 'trial');
-        for k = 1:length(virtsens.trial)
-            for p = 1:size(virtsens.trial{k},1)
-                virtsens_ns.trial{k}(p,:) = virtsens.trial{k}(p,:)/mean(virtsens.trial{k}(p,1:129));
-            end
-        end
+        %%  teile vs durch noise:
+%             for k = 1:length(data_bpfreq.trial)
+%                 virtsens_ns.trial{k} = virtsens.trial{k}./repmat(source_avg_appended_conditions.(['run' num2str(i)]).source_avg.avg.noise(source_avg_appended_conditions.(['run' num2str(i)]).source_avg.inside), 1, size(virtsens.trial{1,k},2));
+%             end
         
-        clearvars virtsens
-       
-        % sanity check nr. 2:
-        cfg = [];
-        avg_ns = ft_timelockanalysis(cfg, virtsens_ns);
-        figure;
-        plot(virtsens_ns.time{1,1}, avg_ns.avg)
-        savefig([sanity_path 'virtsens_ns_all_conditions_run' num2str(run) '_' freq '.fig'])
-        close
-  
+         %% noise normalization by Yuval:
+        
+%             ns = mean(abs(source_avg_appended_conditions.(['run' num2str(i)]).spatialfilter),2);
+            filter_euclid = zeros(length(source_avg_appended_conditions.(['run' num2str(i)]).spatialfilter)/3, size(source_avg_appended_conditions.(['run' num2str(i)]).spatialfilter(1,:),2));
+            n = 1;
+            for k = 1:3:length(source_avg_appended_conditions.(['run' num2str(i)]).spatialfilter)
+                filter_euclid(n,:) = sqrt(source_avg_appended_conditions.(['run' num2str(i)]).spatialfilter(k,:).^2+source_avg_appended_conditions.(['run' num2str(i)]).spatialfilter(k+1,:).^2+source_avg_appended_conditions.(['run' num2str(i)]).spatialfilter(k+2,:).^2);
+                n = n+1;
+            end  
+            
+            ns = mean(abs(filter_euclid),2);
+            for k = 1:length(virtsens.trial)
+                virtsens_ns_yuval.trial{k} = virtsens.trial{1,k}./repmat(ns,1,size(virtsens.trial{1,k},2)); % => all will have a similar noise level
+            end
+
+            virtsens_ns_yuval.time = data_bpfreq.time;
+            virtsens_ns_yuval.fsample = data_bpfreq.fsample;
+
+            for k = 1:length(virtsens_ns_yuval.trial{1}(:,1))
+                virtsens_ns_yuval.label{k} = num2str(k);
+            end
+            virtsens = virtsens_ns_yuval;
+            clear virtsens_ns_yuval
+            cfg = [];
+            avg = ft_timelockanalysis(cfg, virtsens);
+            figure;
+            plot(virtsens.time{1,1}, avg.avg)
+            sanity_path = [outPath 'MEG\sourcespace\noROIs\sanity_check\'];
+            if ~exist(sanity_path, 'dir')
+                mkdir (sanity_path)
+            end
+            savefig([sanity_path 'yuval_ns_mean_virtsens_' files(i).name '_' freqname '.fig'])
+            close
+     
+        
+        %%
+         % siehe Skript von Yuval: => all will have a similar noise level
+        
+%             if 1 == strcmp (cfg_virtsens, 'virtsens_ns')
+%                 ns = mean(abs(spatialfilter),2);
+% 
+%                 for k = 1:length(virtsens.trial)
+%                     virtsens_ns.trial{k} = virtsens.trial{1,k}./repmat(ns,1,size(virtsens.trial{1,k},2)); % => all will have a similar noise level
+%                 end
+% 
+%                 virtsens_ns.time = virtsens.time;
+%                 virtsens_ns.fsample = virtsens.fsample;
+% 
+%                 for k = 1:length(virtsens_ns.trial{1}(:,1))
+%                     virtsens_ns.label{k} = num2str(k);
+%                 end
+%                 virtsens = virtsens_ns;
+%                 clear virtsens_ns
+%             end
 %%
-            files2append.(condition{j}).(['run' num2str(i)]) = virtsens_ns;
-            clear virtsens_ns data_bpfreq cleanMEG_interp vs_euclid_norm
+            files2append.(condition{j}).(['run' num2str(i)]) = virtsens;
+            clear virtsens data_bpfreq cleanMEG_interp vs_euclid_norm
 
         end
     end 
@@ -115,7 +148,7 @@ function [vs_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname, cfg_
         end
     end
     
-    % sanity check Nr. 3:
+    % sanity check Nr. 2:
    
     cfg = [];
     for m = 1:size(fields(vs_allRuns),1)

@@ -1,32 +1,14 @@
 
 
-function adi_rejectvisual_MEG_extra
+function adi_rejectvisual_MEG_extra(path2cleanfile, path_interpolated, subject)
 % Nachbereinigung
+    PathFigure_before_cleaning = [path2cleanfile, 'figures\before_cleaning\'];   
+    PathFigure_after_cleaning = [path2cleanfile, 'figures\after_cleaning\'];   
 
-    subject = 'nl_adi_17'; % Probandennr. eingeben! Ansonsten einfach auf Run drücken
-    filter = '1_95Hz';
-    subj_mainpath       = strcat('W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\', subject, '\MEG_EEG_input\noisereduced\', filter, filesep );
-    path_MEG  = strcat('W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\', subject, '\MEG_analysis\noisereduced\', filter, '\01_clean');
-   
-    if ~exist (path_MEG)
-        mkdir (strcat('W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\', subject, filesep, 'MEG_analysis\noisereduced', filesep, filter, '\01_clean')) ;
-    end
-        
-    PathFigure_before_cleaning = strcat(path_MEG, filesep, 'figures\before_cleaning\');
-        if ~exist (PathFigure_before_cleaning)
-            mkdir(path_MEG, 'figures\before_cleaning\')
-        end    
-        
-    PathFigure_after_cleaning = strcat(path_MEG, filesep, 'figures\after_cleaning\');
-        if ~exist (PathFigure_after_cleaning)
-            mkdir(path_MEG, 'figures\after_cleaning\')
-        end 
-        
-    files   =   dir(fullfile(path_MEG, '*.mat'))
+    files   =   dir(fullfile(path2cleanfile, '*.mat'));
     size_files = size(files);
     cfg = [];
-    
-    cfg.method = 'summary';%'trial'% 'summary' %, 'trial'
+    cfg.method = 'trial';%'trial'% 'summary' %, 'trial'
 %     cfg.method = 'channel';
     cfg.channel = 'MEG'; % MEG
     cfg.keepchannel = 'nan';
@@ -35,60 +17,90 @@ function adi_rejectvisual_MEG_extra
     cfg.eegscale = 5e-8;
     cfg.interactive = 'yes';
     cfg.alim     = 1e-12; 
+    cfg.keeptrial = 'yes';
 
     
-    for i = 5:(size_files(1,1))
+    for i = 1:(size_files(1,1))
         
-        load (strcat(path_MEG, filesep, files(i).name))
-        
+        load ([files(i).folder, filesep, files(i).name], 'cleanMEG')
+        load([path_interpolated files(i).name], 'RetVal')
         cfgn                = [];
         cfgn.parameter      = 'trial';
         cfgn.keeptrials     = 'yes'; % classifiers operate on individual trials
-    %     cfg.channel       = {'all', '-A231', '-A248', '-TRIGGER', '-RESPONSE', '-EKG', '-EOG', '-E67', '-E68'}; % kaputte bzw. störende Kanäle rauswerfen
         cfgn.vartrllength   = 2;
         
         
         %% plot and save avg before cleaning:
              
         tcleanMEG         = ft_timelockanalysis(cfgn,cleanMEG);  
+        figure
         plot(tcleanMEG.time, tcleanMEG.avg(1:248,:)) % MEG
         axis tight
         file            = files(i).name;
         
-        saveas (gcf, (strcat (PathFigure_before_cleaning, file(1:end-4))), 'fig') % save EEG after cleaning figure to directory 
+%         saveas (gcf, [PathFigure_before_cleaning, file(1:end-4)], 'fig') % save EEG after cleaning figure to directory 
         
         %% rejectvisual        
-        [MEG]       = ft_rejectvisual(cfg, cleanMEG); 
-        [cfg_databrowser]           = ft_databrowser(cfg,MEG); 
-         [MEG2]   = ft_rejectvisual(cfg, MEG); 
-         
-        for m = 1:length(MEG2.trial)
-             MEG2.trial{1,m}(249:271,:) = cleanMEG.trial{1,m}(249:271,:);
+
+        trialinfo = cleanMEG.trialinfo;
+        
+        if ~isequal(length(cleanMEG.trial), 1)
+            [cleanMEG]       = ft_rejectvisual(cfg, cleanMEG); 
+            cleanMEG.trialinfo = trialinfo;
+            for p = 1:length(cleanMEG.trial)
+                ind = find(isnan(cleanMEG.trial{p}(:,1)));
+                cleanMEG.ChannelFlag_Bst{p}(ind) =-1;
+                RetVal.ChannelFlag_Bst{p}(ind) =-1;
+            end
+            if ~isempty(cleanMEG.cfg.artfctdef.trial.artifact)
+                for p=1:length(cleanMEG.cfg.artfctdef.trial.artifact)
+                   ind(p) = find(cleanMEG.cfg.artfctdef.trial.artifact(p,1) == cleanMEG.sampleinfo(:,1));
+                end
+                cleanMEG.trial(find(ind))=[];
+                cleanMEG.time(find(ind))=[];
+                cleanMEG.sampleinfo(find(ind),:)=[];
+                cleanMEG.ChannelFlag_Bst(find(ind),:)=[];
+                cleanMEG.triggerchannel
+                cleanMEG.
+                cleanMEG
+                cleanMEG
+                cleanMEGcleanMEG
+            end
+        elseif isequal(length(cleanMEG.trial), 1)
+
+            z_cleanMEG = zscore(cleanMEG.trial{1});
+            ind=zeros(1, size(z_cleanMEG,1));
+            figure
+            plot(tcleanMEG.time, z_cleanMEG) % MEG
+            for p=1:size(z_cleanMEG,1)
+               [temp] =  find(abs(z_cleanMEG(p,1000:2000)) >=5 );
+               if ~isempty(temp)
+                   ind(p)=sum(temp);
+               end
+            end
+            badchan = find(ind);
+            cleanMEG.trial{1}(badchan,:)=NaN;
+            cleanMEG.trialinfo = trialinfo
         end
+        
         
          %% plot and save avg after cleaning
  
-        tMEG2            = ft_timelockanalysis(cfgn,MEG2);  
+        tcleanMEG            = ft_timelockanalysis(cfgn,cleanMEG);  
         figure
-        plot(tMEG2.time, tMEG2.avg(1:248,:))     
+        plot(tcleanMEG.time, tcleanMEG.avg(1:248,:))     
         axis tight;
         title(strcat('MEG_', file(1:end-4)))
-        cleanMEG = MEG2;
-        saveas (gcf, (strcat (PathFigure_after_cleaning, file(1:end-4))), 'fig') % save EEG after cleaning figure to directory 
         
-        save (strcat(path_MEG, filesep, (files(i).name)), 'cleanMEG'); % save mat-file after cleaning
-        clear MEG2 RetVal MEG cleanMEG
-               
-%         %% EEG
-%          cfg.channel = 274:337; % MEG
-%          [EEG, trlsel,chansel] = ft_rejectvisual(cfg, RetVal); 
-%         [cfg_browser] = ft_databrowser(cfg,EEG); 
-%         
-%         for m=1:length(MEG.trial)
-%              MEG.trial{1,m}(274:337,:) = RetVal.trial{1,m}(274:337,:)
-%         end
+        saveas (gcf, [PathFigure_after_cleaning file(1:end-4)], 'fig') % save EEG after cleaning figure to directory 
+        
+%         load ([path_interpolated, files(i).name])
         
         
+        save ([path2cleanfile (files(i).name)], 'cleanMEG'); % save mat-file after cleaning
+        save ([path_interpolated (files(i).name)], 'RetVal'); % save mat-file after cleaning
+           clearvars cleanMEG    
+  
         
 %         cfg.artfctdef.reject = 'complete';
 %         cfg.artfctdef.feedback = 'yes';

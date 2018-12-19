@@ -1,10 +1,85 @@
 
- 
-function [] = SVM_Guggenmos_tutorial(sessions, outPath, freq, condition, atlas)
+ function [virtsens_all_subjects]= main(virtsens_all_subjects, atlas, path2data, outPath, bp, condition, meanmax, i);
 
-% delete cerebellum
-% atlas_indices = cell2mat(atlas(:,3));
-% sessions.data = sessions.data(:, atlas_indices,:);
+  session = [];
+  [session_all_freqs] = mk_SVM_struct([], atlas, path2data, outPath, bp, condition, meanmax);
+  virtsens_all_subjects(i) = session_all_freqs;
+
+ 
+%   save ([outPath 'MEG\sourcespace\runs_appended\virtsens\' cfg_virtsens '_' condition '_allRuns_', freqname, '.mat'], 'vs_allRuns', '-v7.3');
+ end
+ 
+ 
+ function [session_all_freqs] = mk_SVM_struct(session, atlas, path2data, outPath, freqname, condition, meanmax)
+ 
+ for k = 1:length(freqname)
+    fileName = [path2data 'noROIs\runs_appended\virtsens\virtsens_all_conditions_allRuns_', freqname{k}, '.mat'];
+     if ~exist(fileName, 'file')
+        [vs_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname{k}, condition);
+     else 
+        load (fileName)
+     end
+     
+    num_conditions = size(fields(vs_allRuns),1);
+    fieldnames =   fields(vs_allRuns);       
+
+    if 3 == num_conditions
+        data = cat(2, vs_allRuns.(condition{1}).trial, vs_allRuns.(condition{2}).trial, vs_allRuns.(condition{3}).trial);
+        session.labels = cat(2, ones(1,length(vs_allRuns.(condition{1}).trial)), 2*ones(1, length(vs_allRuns.(condition{2}).trial)), 3*ones(1, length(vs_allRuns.(condition{3}).trial)));
+    elseif 2 == num_conditions
+        data = cat(2, vs_allRuns.(fieldnames{1}).trial, vs_allRuns.(fieldnames{2}).trial);
+        switch (fieldnames{1})
+            case 'like'
+                ind_field_1 = 1;
+            case 'dislike' 
+                ind_field_1 = 2;
+            case 'dontcare'
+                ind_field_1 = 3;
+        end
+        switch (fieldnames{2})
+            case 'like'
+                ind_field_2 = 1;
+            case 'dislike' 
+                ind_field_2 = 2;
+            case 'dontcare'
+                ind_field_2 = 3;
+        end       
+        session.labels = cat(2, ind_field_1*ones(1, length(vs_allRuns.(fieldnames{1}).trial)), ind_field_2*ones(1, length(vs_allRuns.(fieldnames{2}).trial)));
+    end
+    for i = 1:length(data)
+        temp = data{1,i};
+        session.data(i,:,:) = temp;
+    end
+    session.time = vs_allRuns.(fieldnames{1}).time;
+    clear data;
+    
+    fieldnames_atlas = fields(atlas);
+    if 1 == strcmp(meanmax, 'mean')
+        for m=1:size(fields(atlas),1)
+            data(:,m,:) = mean(session.data(:, atlas.(fieldnames_atlas{m}),:),2);
+        end
+    elseif  1 == strcmp(meanmax, 'max')
+        for m=1:size(fields(atlas),1)
+            data(:,m,:) = max(max(session.data(:, atlas.(fieldnames_atlas{m}),:),3));
+        end
+    end
+   
+    if k==1 
+        session_all_freqs.data = data;
+        session_all_freqs.labels = session.labels;
+        session_all_freqs.time = session.time;
+    elseif k~=1 
+        session_all_freqs.data = cat(2, session_all_freqs.data, data);
+    end
+    clear vs_allRuns session
+ end
+end
+  
+
+
+     
+ %%
+function [] = SVM_Guggenmos_tutorial(sessions, outPath, freq, condition)
 
 % We set a seed, in order to make analyses reproducible:
 rng('default');
@@ -155,9 +230,8 @@ n_sessions = length(sessions);
     result.like = '1';
     result.dislike = '2';
     result.dontcare = '3';
-    result.atlas = atlas;
     
-    fn_outPath = [outPath '\Guggenmos_decoding_results\'];
+    fn_outPath = [outPath 'MEG\sourcespace\noROIs\Guggenmos_decoding_results\'];
     if ~exist (fn_outPath, 'dir')
         mkdir (fn_outPath)
     end
@@ -175,7 +249,7 @@ if 3 == length(conditions)
     xlim([-0.5 1])
     xlabel('Time [s]');
     ylabel('Classification accuracy svm');
-    savefig([outPath '\Guggenmos_decoding_results\decoding_result_' freq '_svm.fig'])
+    savefig([outPath 'MEG\sourcespace\noROIs\Guggenmos_decoding_results\decoding_result_' freq '_svm.fig'])
     close
     figure; axis tight
     hold on
@@ -187,7 +261,7 @@ if 3 == length(conditions)
     xlabel('Time [s]')
     ylabel('Classification accuracy weird')
     legend('like vs dislike', 'like vs dontcare', 'dislike vs dontcare')
-    savefig([outPath '\Guggenmos_decoding_results\decoding_result_' freq '_weird.fig'])
+    savefig([outPath 'MEG\sourcespace\noROIs\Guggenmos_decoding_results\decoding_result_' freq '_weird.fig'])
     close
     figure; axis tight
     hold on
@@ -199,7 +273,7 @@ if 3 == length(conditions)
     xlabel('Time [s]')
     ylabel('Classification accuracy gnb')
     legend('like vs dislike', 'like vs dontcare', 'dislike vs dontcare')
-    savefig([outPath '\Guggenmos_decoding_results\decoding_result_' freq '_gnb.fig'])
+    savefig([outPath 'MEG\sourcespace\noROIs\Guggenmos_decoding_results\decoding_result_' freq '_gnb.fig'])
     close
 else
     figure; axis tight
@@ -212,7 +286,7 @@ else
     xlabel('Time [s]')
     ylabel('Classification accuracy')
     legend('SVM', 'WeiRD', 'GNB')
-    savefig([outPath '\Guggenmos_decoding_results\decoding_result_' freq 'SVM_WeiRD_BNB.fig'])
+    savefig([outPath 'MEG\sourcespace\noROIs\Guggenmos_decoding_results\decoding_result_' freq 'SVM_WeiRD_BNB.fig'])
 end
 
 % Already for one participant and a reduced data set (10 insteada of 92 conditions), these results look 
@@ -222,11 +296,11 @@ end
  %%
  
 
-function [vs_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname, condition, atlas)
+function [vs_allRuns] = adi_appendvirtsensMEG(path2data, outPath, freqname, cfg_virtsens, condition)
 
 % append Runs 
 % Channels   --> Configuration of Brainstorm MEG Channels    
-if ~exist([outPath 'MEG\sourcespace\noROIs\runs_appended\virtsens\virtsens_all_conditions_allRuns_', freqname, '.mat'], 'file')
+if ~exist([path2data 'noROIs\runs_appended\virtsens\' cfg_virtsens '_all_conditions_allRuns_', freqname, '.mat'], 'file')
     vs_allRuns = [];
     spatialfilter = {};
 
@@ -241,7 +315,7 @@ if ~exist([outPath 'MEG\sourcespace\noROIs\runs_appended\virtsens\virtsens_all_c
             [data_bpfreq] = adi_bpfilter(cleanMEG_interp, freqname);
          
             if ~isfield(spatialfilter, (['run' num2str(i)]))
-                spatialfilter.(['run' num2str(i)]) = load ([outPath 'MEG\sourcespace\spatialfilter\run' num2str(i) '\spatialfilter_loose_orientation_singletrials_' freqname '.mat']);
+                spatialfilter.(['run' num2str(i)]) = load ([path2data MEG\sourcespace\spatialfilter\run' num2str(i) '\spatialfilter_loose_orientation_singletrials_' freqname '.mat']);
                 spatialfilter.(['run' num2str(i)]) = cat(1,spatialfilter.(['run' num2str(i)]).spatialfilter_orig{:});   
             end
 
@@ -275,7 +349,7 @@ if ~exist([outPath 'MEG\sourcespace\noROIs\runs_appended\virtsens\virtsens_all_c
             avg = ft_timelockanalysis(cfg, virtsens);
             figure;
             plot(virtsens.time{1,1}, mean(avg.avg))
-            sanity_path = [outPath 'MEG\sourcespace\all_voxels_without_cerebellum\sanity_check\'];
+            sanity_path = [path2data '\noROIs\sanity_check\'];
             if ~exist(sanity_path, 'dir')
                 mkdir (sanity_path)
             end
@@ -332,21 +406,18 @@ if ~exist([outPath 'MEG\sourcespace\noROIs\runs_appended\virtsens\virtsens_all_c
         close
     end
     
-    pathAppended = [outPath '\MEG\sourcespace\all_voxels_without_cerebellum\runs_appended\virtsens\'];
+    pathAppended = [path2data '\noROIs\runs_appended\virtsens\'];
     if ~exist ( pathAppended, 'dir')
         mkdir (pathAppended)
     end
    
-    save ([outPath 'MEG\sourcespace\all_voxels_without_cerebellum\runs_appended\virtsens\' cfg_virtsens '_all_conditions_allRuns_', freqname, '.mat'], 'vs_allRuns', '-v7.3');
+    save ([path2data '\noROIs\runs_appended\virtsens\' cfg_virtsens '_all_conditions_allRuns_', freqname, '.mat'], 'vs_allRuns', '-v7.3');
 
 else
     vs_allRuns = [];
-    %load ([outPath 'MEG\sourcespace\all_voxels_without_cerebellum\runs_appended\virtsens\' cfg_virtsens '_all_conditions_allRuns_', freqname, '.mat'], 'vs_allRuns');
+    %load ([outPath 'MEG\sourcespace\noROIs\runs_appended\virtsens\' cfg_virtsens '_all_conditions_allRuns_', freqname, '.mat'], 'vs_allRuns');
 end
 
-
-% session.data = session.data(:, 92:end,:);
-% session.atlas = atlas;
 end
 
 

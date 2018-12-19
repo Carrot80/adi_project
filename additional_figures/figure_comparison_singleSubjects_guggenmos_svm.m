@@ -1,4 +1,4 @@
-function for_all_subj (subjpath, filename, freq, path2fig, algo)
+function for_all_subj (subjpath, filename, freq, path2fig, algo, result_dir)
 
 %% produziert Abbildungen für time series crossvalidation eines jeden Probanden 
    
@@ -13,7 +13,7 @@ function for_all_subj (subjpath, filename, freq, path2fig, algo)
  %% like vs. dislike
 for m = 1: length(algo)
     for i = 1:length(list)   
-           path2SVMresult = ([subjpath list(i).name '\MEG\sourcespace\noRois\Guggenmos_decoding_results\']); 
+           path2SVMresult = ([subjpath list(i).name '\MEG\sourcespace\' result_dir]); 
            [result] = kh_figure(path2SVMresult, filename, freq);
            like_vs_dislike_all.(algo{m}).(list(i).name).accuracy = squeeze(result.(lower(algo{m}))(1,2,:));
            like_vs_dislike_all.(algo{m}).(list(i).name).name = list(i).name;
