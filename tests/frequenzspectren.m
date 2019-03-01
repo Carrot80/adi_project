@@ -1,5 +1,53 @@
-ns_avg=vs_allRuns_appended.trial{1,1};
+
+  virtsens = [];
+    for k = 1:length(data_appended.trial)
+        virtsens.trial{k} = spatialfilter*data_appended.trial{k};
+    end
+
+
+[pxx,f] = pwelch(spatialfilter,[],[],[],256.001);    
+figure
+semilogy(f, pxx)
+
+[FourRef,Fref]=fftBasic(spatialfilter', round(256.001));
+ figure;
+ plot(FourRef, Fref)
+
+ 
+ [pxx,f] = pwelch(virtsens.trial{1,1}',[],[],[],256.001);    
+figure
+semilogy(f, pxx)
+
+[FourRef,Fref]=fftBasic(virtsens.trial{1,1}, round(256.001));
+ figure;
+ plot(FourRef, Fref)
+
+ 
+  
+ [pxx,f] = pwelch(virtsens.trial{1,1}',[],[],[],256.001);    
+figure
+semilogy(f, pxx)
+
+[FourRef,Fref]=fftBasic(virtsens.trial{1,1}, round(256.001));
+ figure;
+ plot(FourRef, Fref)
+
+
+
+
 ns_avg=ns_avg';
+
+cfg=[];
+avg=ft_timelockanalysis(cfg, sessions.data);
+
+avg=squeeze(mean(avg_data_dislike.trial));
+sRate=256;    
+[FourRef,Fref]=fftBasic(avg,round(sRate));
+figure
+plot(FourRef, Fref)
+
+
+
 
 sRate=256;    
 [FourRef,Fref]=fftBasic(ns_avg,round(sRate));

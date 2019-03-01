@@ -58,13 +58,15 @@ function [vs_allRuns] = adi_appendvirtsensMEG(vs_allRuns, data_all_conditions, p
     % soccerball(=football)    
 
 %     [data_all_conditions] = regroup_trials(data_all_conditions, pattern, trigger);
-    [data_all_conditions_bpfreq] = adi_bpfilter(data_all_conditions, freq, dir_out, run);
+%     [data_all_conditions_bpfreq] = adi_bpfilter(data_all_conditions, freq, dir_out, run);
+    data_all_conditions_bpfreq = data_all_conditions;
     clearvars data_all_conditions     
     
     load ([path2spatialfilter 'run' num2str(run) '\source_avg_appended_conditions_' freq '.mat'], 'source_avg');
     spatialfilter = cat(1,source_avg.avg.filter{:});   
 
-
+    
+%%
     % laut fieldtrip discussion list zuerst weights mit sensor data multiplizieren: https://mailman.science.ru.nl/pipermail/fieldtrip/2017-July/011661.html    
     virtsens = [];
     for k = 1:length(data_all_conditions_bpfreq.trial)
@@ -88,7 +90,11 @@ function [vs_allRuns] = adi_appendvirtsensMEG(vs_allRuns, data_all_conditions, p
     for n = 1:length(virtsens.trial{1,1}(:,1))
         virtsens.label{n,1}=num2str(n);
     end
+  
     
+    
+    
+    %%
     fn_data_all_conditions_bpfreq = fields(data_all_conditions_bpfreq);
     fn_virtsens = fields(virtsens);
     diff_fieldnames = setdiff(fn_data_all_conditions_bpfreq, fn_virtsens);
@@ -132,6 +138,65 @@ function [vs_allRuns] = adi_appendvirtsensMEG(vs_allRuns, data_all_conditions, p
     
     vs_allRuns.(['run' num2str(run)]) = virtsens_ns;
     clearvars virtsens_ns
+    
+    fsample = vs_allRuns.(['run' num2str(run)]).fsample;
+    [FourRef,Fref]=fftBasic(avg_ns.avg, round(fsample));
+    figure;
+    plot(FourRef, Fref)
+    savefig([dir_out 'avg_virtsens_freq_spectrum_run' run '.fig'])
+    close
+    
+
+      %% svd function aus connectivity tutorial:
+   clearvars source_avg 
+      
+     virtsens = [];
+    for k = 1:length(data_all_conditions_bpfreq.trial)
+        virtsens.trial{k} = spatialfilter*data_all_conditions_bpfreq.trial{k};
+    end  
+    
+    virtualchanneldata = [];
+    virtualchanneldata.label = {'cortex'};
+    virtualchanneldata.time = data_all_conditions_bpfreq.time;
+    
+for k=1:length(virtsens.trial)    
+    n=1;
+    for p=1:3:length(virtsens.trial{k})
+        vs_timeseries = cat(2, virtsens.trial{k}(p:p+2,:));
+        [u, s, v] = svd(vs_timeseries, 'econ'); 
+        timeseriesmaxproj = u(:,1)' * vs_timeseries;
+        virtualchanneldata.trial{1,k}(n,:) = timeseriesmaxproj;
+        clear timeseriesmaxproj u s v vs_timeseries
+        n=n+1;
+    end
+end    
+
+  % sanity check:
+    
+    figure;
+    plot(virtualchanneldata.time{1,1}, abs(virtualchanneldata.trial{1,1}))
+
+    fsample = vs_allRuns.(['run' num2str(run)]).fsample;
+    [FourRef,Fref]=fftBasic(virtualchanneldata.trial{1,1}, round(fsample));
+    figure;
+    plot(FourRef, Fref)
+    
+    
+    virtualchanneldata_noisecorr = virtualchanneldata;
+    virtualchanneldata_noisecorr = rmfield(virtualchanneldata_noisecorr, 'trial');
+    for k = 1:length(virtualchanneldata.trial)
+        for p = 1:size(virtualchanneldata.trial{k},1)
+            virtualchanneldata_noisecorr.trial{k}(p,:) = virtualchanneldata.trial{k}(p,:)/mean(virtualchanneldata.trial{k}(p,1:129));
+        end
+    end
+    
+    % sanity check no 2:
+    
+    figure;
+    plot(virtualchanneldata_noisecorr.time{1,1}, abs(virtualchanneldata_noisecorr.trial{1,1}))
+    
+
+    
 
 end
 
@@ -219,11 +284,11 @@ cfg =[];
 cfg.latency = [-0.5 1];
 data_bpfreq_sel = ft_selectdata(cfg, data_bpfreq);
 
-% den Bereich nochmal anschauen:
-% sRate = 1017.25;
-% [FourRef,Fref]=fftBasic(data_bpfreq_sel.trial{1,1},round(sRate));
-% figure
-% plot(FourRef, Fref)
+den Bereich nochmal anschauen:
+sRate = 1017.25;
+[FourRef,Fref]=fftBasic(data_bpfreq_sel.trial{1,1},round(sRate));
+figure
+plot(FourRef, Fref)
 
 
 cfg =[];

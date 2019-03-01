@@ -5,19 +5,19 @@ function adi_source_SVM (path2vol, path2data, mriPath, outPath_extdisc, freqband
 % time =  latency(1,:);
 
 %% run 1:
-if ~exist([outPath_extdisc '\run1\spatialfilter_fixed_orientation_singletrials_' freqbandname '.mat'], 'file')
+if ~exist([outPath_extdisc 'virtsens\run1\virtsens_' freqbandname '.mat'], 'file')
     adi_source_reconstruction_virt_sens(path2vol, path2data, mriPath,  num2str(1), freqbandname, condition, outPath_extdisc)    
 end
 
 %% run2:
 
-if ~exist([outPath_extdisc '\run2\spatialfilter_fixed_orientation_singletrials_' freqbandname '.mat'], 'file')
+if ~exist([outPath_extdisc 'virtsens\run2\virtsens_' freqbandname '.mat'], 'file')
     adi_source_reconstruction_virt_sens(path2vol, path2data, mriPath, num2str(2), freqbandname, condition, outPath_extdisc)
 end
 
 %% run3:
 
-if ~exist([outPath_extdisc '\run3\spatialfilter_fixed_orientation_singletrials_' freqbandname '.mat'], 'file')
+if ~exist([outPath_extdisc 'virtsens\run3\virtsens_' freqbandname '.mat'], 'file')
     adi_source_reconstruction_virt_sens(path2vol, path2data, mriPath, num2str(3), freqbandname, condition, outPath_extdisc)
 end
 
@@ -26,62 +26,41 @@ end
 function [virtsens] = adi_source_reconstruction_virt_sens(path2vol, path2data, mriPath, run, freq, condition, outPath_extdisc)
     
 % load data:
-index = zeros(3,1);
-condition = cell(3,1);
-if exist([path2data, 'Neu_Like' '500_' run '.mat'], 'file')
-%    condition{1} = 'data_like_bpfreq';
-   index(1) = 1;
-   load ([path2data, 'Neu_Like' '500_' run '.mat'], 'cleanMEG_interp');
-   if strcmp(freq, 'bp1_95Hz') 
-       data.like = cleanMEG_interp;
-   else
-       [data_like_bpfreq] = adi_bpfilter(cleanMEG_interp, freq);
-        data.like = data_like_bpfreq;
-   end
-   clear cleanMEG_interp 
-else
-    condition{1} = [];
-end
-if exist([path2data, 'Neu_Dislike' '500_' run '.mat'], 'file')
-    index(2) = 1;
-    condition{2} = 'data_dislike_bpfreq';
-    load ([path2data, 'Neu_Dislike' '500_' run '.mat'], 'cleanMEG_interp');
-    if strcmp(freq, 'bp1_95Hz') 
-        data.dislike = cleanMEG_interp;
-    else
-    [data_dislike_bpfreq] = adi_bpfilter(cleanMEG_interp, freq);
-         data.dislike = data_dislike_bpfreq;
+file_name = ['Neu_Like' '500_' run];
+dir_run = dir([path2data '*.mat']);
+for i=1:length(dir_run)
+    if 1==contains(dir_run(i).name, file_name)
+        load ([path2data dir_run(i).name], 'cleanMEG_interp'); 
+        [data_like_bpfreq] = adi_bpfilter(cleanMEG_interp, freq);
+        clear cleanMEG_interp 
     end
-    clearvars cleanMEG_interp 
-else
-     condition{2} = [];
-end
-% if exist([path2data, 'dontcare' '500_' run '.mat'], 'file')
-%     index(3) = 1;
-% %     condition{3} = 'data_dontcare_bpfreq';
-%     data_dontcare = load ([path2data, 'dontcare' '500_' run '.mat'], 'cleanMEG_interp');
-%     [data_dontcare_bpfreq] = adi_bpfilter(data_dontcare.cleanMEG_interp, freq);
-%     data.dontcare = data_dontcare_bpfreq;
-%     clear data_dontcare data_dontcare_bpfreq
-% else
-%        condition{3} = [];
-% end
 
-if ~exist('data', 'var')
+end
+
+file_name = ['Neu_Dislike' '500_' run];
+for i=1:length(dir_run)
+    if 1==contains(dir_run(i).name, file_name)
+        load ([path2data dir_run(i).name], 'cleanMEG_interp'); 
+        [data_dislike_bpfreq] = adi_bpfilter(cleanMEG_interp, freq);
+        clear cleanMEG_interp 
+    end
+
+end
+
+if ~exist('data_dislike_bpfreq', 'var')
     return
 end
-fieldsnames = fields(data);
-% ind_cond = find(~cellfun(@isempty,condition));
-cfg = [];
-switch length( find(index))
-    case 3
-    data_appended = ft_appenddata(cfg, data.(fieldsnames{1}).cleanMEG_interp, data.(fieldsnames{2}).cleanMEG_interp, data.(fieldsnames{3}).cleanMEG_interp);
-    case 2 
-    data_appended = ft_appenddata(cfg, data.(fieldsnames{1}), data.(fieldsnames{2}));
-end   
 
-fsample=data.(fieldsnames{1}).fsample;
-
+data_all_conditions.trial = [data_like_bpfreq.trial  data_dislike_bpfreq.trial];
+data_all_conditions.time = [data_like_bpfreq.time  data_dislike_bpfreq.time];
+data_all_conditions.response = [data_like_bpfreq.trialinfo.response data_dislike_bpfreq.trialinfo.response];
+data_all_conditions.response_label = [data_like_bpfreq.trialinfo.response_label data_dislike_bpfreq.trialinfo.response_label];
+data_all_conditions.triggerlabel = [data_like_bpfreq.trialinfo.triggerlabel data_dislike_bpfreq.trialinfo.triggerlabel];
+data_all_conditions.balldesign = [data_like_bpfreq.trialinfo.balldesign data_dislike_bpfreq.trialinfo.balldesign];
+data_all_conditions.fsample = data_like_bpfreq.fsample;
+data_all_conditions.grad = data_like_bpfreq.grad;
+data_all_conditions.label = data_like_bpfreq.label;
+  
     %% load template vol:
     if ~exist('template_grid', 'var')
         load('\\nas-fa0efsusr1\herfurkn1\My Documents\MATLAB\Bibliotheken\fieldtrip-20180607\template\headmodel\standard_singleshell');
@@ -137,8 +116,8 @@ fsample=data.(fieldsnames{1}).fsample;
 %         cfg.dim        = [256 256 256];
 %         mri_resliced = ft_volumereslice(cfg, mri_realigned);
         mri_realigned_cm = ft_convert_units(mri_realigned, 'cm');
-        grad = ft_convert_units(data_appended.grad, 'cm');
-        data_appended.grad = grad; % geändert
+        grad = ft_convert_units(data_all_conditions.grad, 'cm');
+        data_all_conditions.grad = grad; % geändert
 
         cfg                = [];
         cfg.grid.warpmni   = 'yes';
@@ -165,7 +144,7 @@ fsample=data.(fieldsnames{1}).fsample;
 
     ft_plot_mesh(sourcemodel.pos(sourcemodel.inside,:),'vertexcolor','b');% plot only locations inside the volume
     
-    ft_plot_sens(data_appended.grad,'style','g*', 'coil', 1);% plot the sensor array
+    ft_plot_sens(data_all_conditions.grad,'style','g*', 'coil', 1);% plot the sensor array
     
     view ([0 -90 0])
 %     
@@ -182,8 +161,8 @@ fsample=data.(fieldsnames{1}).fsample;
 
     %We first create the leadfield using ft_prepare_leadfield using the individual head model from the previous step, the sensor array and the sourcemodel.
     cfg                 = [];
-    cfg.channel         = data_appended.label;% ensure that rejected sensors are not present
-    cfg.grad            = data_appended.grad;
+    cfg.channel         = data_all_conditions.label;% ensure that rejected sensors are not present
+    cfg.grad            = data_all_conditions.grad;
     cfg.vol             = hdm_ind;
     cfg.lcmv.reducerank = 2; % default for MEG is 2, for EEG is 3
     cfg.grid = sourcemodel;
@@ -205,30 +184,30 @@ fsample=data.(fieldsnames{1}).fsample;
     cfg.vartrllength = 2;
 
     try
-        avg_data_appended = ft_timelockanalysis(cfg, data_appended);
+        avg_data_all_conditions = ft_timelockanalysis(cfg, data_all_conditions);
     catch ME
         if 1==strcmp(ME.message,'data has variable trial lengths, you specified not to accept that')
-           for j = 1:length(data_appended.time)
-            [ind(j)] =  isequal(length(data_appended.time{j}), 3052);
+           for j = 1:length(data_all_conditions.time)
+            [ind(j)] =  isequal(length(data_all_conditions.time{j}), 3052);
            end
            trl_ind = find(ind == false);
            for j=1:length(trl_ind)
-               data_appended.time{1, trl_ind(j)}(:,1)=[];
-               data_appended.trial{1,trl_ind(j)}(:,1)=[];
+               data_all_conditions.time{1, trl_ind(j)}(:,1)=[];
+               data_all_conditions.trial{1,trl_ind(j)}(:,1)=[];
            end
-           avg_data_appended = ft_timelockanalysis(cfg, data_appended);     
+           avg_data_all_conditions = ft_timelockanalysis(cfg, data_all_conditions);     
         end
     end
     cfg = [];
-    avg = ft_timelockanalysis(cfg, data_appended);
-    [FourRef,Fref] = fftBasic(avg.avg, round(fsample));
+    avg = ft_timelockanalysis(cfg, data_all_conditions);
+    [FourRef,Fref] = fftBasic(avg.avg, round(data_all_conditions.fsample));
     figure;
     plot(FourRef, Fref)
-    PathFig = [outPath_extdisc '\run' run '\'];
+    PathFig = [outPath_extdisc 'source_avg\run' run '\'];
     if ~exist(PathFig, 'dir')
         mkdir(PathFig)
     end
-    savefig([outPath_extdisc '\run' run '\freqspectrum_avg_filtered_trials.fig'])
+    savefig([PathFig '\freqspectrum_avg_filtered_trials.fig'])
     close
     
     % Now we make a first call to ft_sourceanalysis in order to compute the spatial filters on the basis of the entire data and keep them in the output for a later use.
@@ -239,27 +218,93 @@ fsample=data.(fieldsnames{1}).fsample;
     cfg.vol = hdm_ind; % Stefan: cfg.headmodel = vol;
     cfg.lcmv.keepfilter = 'yes';
     cfg.lcmv.projectnoise = 'yes';
-    cfg.channel = data_appended.label;
+    cfg.channel = data_all_conditions.label;
     cfg.keeptrials = 'yes';
     cfg.lcmv.fixedori='yes';
     cfg.lcmv.lambda='5%';
     try
-        source_avg = ft_sourceanalysis(cfg, avg_data_appended);
+        source_avg = ft_sourceanalysis(cfg, avg_data_all_conditions);
     catch
 
     end
 
-    outPath_extdisc_subj = [ outPath_extdisc 'run' run filesep];
-    if ~exist(outPath_extdisc_subj, 'dir')
-        mkdir (outPath_extdisc_subj)
+    outPath_extdisc_subj = [ outPath_extdisc filesep 'source_avg' filesep 'run' run filesep];
+   
+    save([outPath_extdisc_subj 'source_avg_appended_conditions_' freq], 'source_avg')
+    spatialfilter = cat(1,source_avg.avg.filter{:});   
+    
+        % laut fieldtrip discussion list zuerst weights mit sensor data multiplizieren: https://mailman.science.ru.nl/pipermail/fieldtrip/2017-July/011661.html    
+    virtsens = [];
+    for k = 1:length(data_all_conditions.trial)
+        virtsens.trial{k} = spatialfilter*data_all_conditions.trial{k};
     end
     
+    label = [1:size(virtsens.trial{1,1},1)]';
+    for k = 1:length(label)
+        virtsens.label{k,1} = num2str(label(k));
+    end
+
     
-    spatialfilter_orig = source_avg.avg.filter;
-%     save([outPath_extdisc_subj 'spatialfilter_loose_orientation_singletrials_' freq], 'spatialfilter_orig')
-    save([outPath_extdisc_subj 'source_avg_appended_conditions_' freq], 'source_avg')
+    fn_data_all_conditions = fieldnames(data_all_conditions);
+    fn_virtsens = fieldnames(virtsens);
+
+    diff_fieldnames = setdiff(fn_data_all_conditions, fieldnames(virtsens));
+
+    for k=1:length(diff_fieldnames)
+        virtsens.(diff_fieldnames{k}) = data_all_conditions.(diff_fieldnames{k});
+    end
+
+       
+    [pxx,f] = pwelch(virtsens.trial{1,1}',[],[],[],data_all_conditions.fsample); 
+    figure
+    semilogy(f, pxx)
+    Pathvirtsens =  [ outPath_extdisc filesep 'virtsens' filesep 'run' run filesep ];
+    if ~exist(Pathvirtsens, 'dir')
+        mkdir(Pathvirtsens)
+    end
     
+    savefig([Pathvirtsens 'freqspectrum_virtsens_' freq '.fig'])
+    close
     
+    save([Pathvirtsens 'virtsens_' freq '.mat'], 'virtsens')
+     % sanity check:
+    
+    cfg = [];
+    cfg.vartrllength = 2;
+    avg = ft_timelockanalysis(cfg, virtsens);
+    figure;
+    plot(virtsens.time{1,1}, avg.avg)
+    sanity_path = [Pathvirtsens '\sanity_check\'];
+    if ~exist(sanity_path, 'dir')
+        mkdir (sanity_path)
+    end
+    savefig([sanity_path 'virtsens_all_conditions_run' num2str(run) '_' freq '.fig'])
+    close
+ 
+%% noise normalization nach Gespräch mit Stefan:
+%     abs_timevector =  abs(data_all_conditions.time{1,1});
+%     value_closest_zero = min(abs_timevector);
+%     [~, ind_closest_zero] = find(abs_timevector == value_closest_zero);
+%     
+%     virtsens_ns = virtsens;
+%     virtsens_ns = rmfield(virtsens_ns, 'trial');
+%     for k = 1:length(virtsens.trial)
+%         for p = 1:size(virtsens.trial{k},1)
+%             virtsens_ns.trial{k}(p,:) = virtsens.trial{k}(p,:)./mean(virtsens.trial{k}(p,1:ind_closest_zero));
+%         end
+%     end
+%     clearvars virtsens
+    
+%      % sanity check nr. 2:
+%     cfg = [];
+%     cfg.vartrllength = 2;
+%     avg_ns = ft_timelockanalysis(cfg, virtsens_ns);
+%     figure;
+%     plot(virtsens_ns.time{1,1}, avg_ns.avg)
+%     savefig([sanity_path 'virtsens_ns_all_conditions_run' num2str(run) '_' freq '.fig'])
+%     close
+%     
+%     
 end
 
 
@@ -294,6 +339,8 @@ switch bpname
         bpfreq = [10 45];
 end
 
+
+
 cfg = [];
 cfg.keeptrials = 'yes';
 cfg.vartrllength = 2;
@@ -324,6 +371,15 @@ cfg =[];
 cfg.latency = [-0.5 1];
 data_bpfreq_res_sel = ft_selectdata(cfg, data_bpfreq_res);
 data_bpfreq_res_sel.trialinfo=data_bpfreq.trialinfo; 
+
+
+for k = 1:length(data_bpfreq_res_sel.trial)
+    data_bpfreq_res_sel.grad.label(249:end) = [];
+    data_bpfreq_res_sel.grad.chanori(249:end, :) = [];
+    data_bpfreq_res_sel.grad.chanpos(249:end, :) = [];
+    data_bpfreq_res_sel.grad.tra(249:end, :) = [];
+    data_bpfreq_res_sel.label(249:end) = [];
+end
 
 
 

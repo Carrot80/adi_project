@@ -1,31 +1,36 @@
 
 
-function adi_artifact_cleaningMEG(path2retval, path2cleanfile, subject, filter, trigger)
+function adi_artifact_cleaningMEG(path2ft_data, bst_path, path2cleanfile, subject, filter, trigger)
 
 %%  entfernt Kanäle, die in Datei "art_rej.mat" gespeichert sind (erstellt mittels "Auslesen_Der_artifakte.m")
 
-FileList = dir(fullfile([path2retval 'Neu*.mat']));
+FileList = dir(fullfile([path2ft_data '*ike50_*.mat']));
 
-for j = 4:length (FileList) % 
-    load ([FileList(j).folder filesep FileList(j).name], 'RetVal');
+for j = 1:length (FileList) % 
+    load ([FileList(j).folder filesep FileList(j).name], 'ft_data');
     
 %     cfg = [];
 %     cfg.trials        = 'all'; 
 %     cfg.feedback = 'yes';
 %     cfg.bpfilter      = 'yes'; 
 %     cfg.bpfreq        = [1 45];
-%     [RetVal2] = ft_preprocessing(cfg, RetVal);
-%     RetVal2.ChannelFlag_Bst = RetVal.ChannelFlag_Bst;
+%     [ft_data2] = ft_preprocessing(cfg, ft_data);
+%     ft_data2.ChannelFlag_Bst = ft_data.ChannelFlag_Bst;
+    
+    load ([bst_path FileList(j).name(1:end-4) filesep 'brainstormstudy.mat'])
+    
+    if ~isempty(BadTrials)
+        ft_data.trial(BadTrials)=[];
+    end
     
     % figure before cleaning:
     cfgn                = [];
     cfgn.parameter      = 'trial';
     cfgn.baseline       = [-1 0];
-    cfgn.keeptrials     = 'yes'; % classifiers operate on individual trials
     cfgn.vartrllength   = 2;
-    tRetVal             = ft_timelockanalysis(cfgn, RetVal);  
+    t_data             = ft_timelockanalysis(cfgn, ft_data);  
     figure
-    plot(tRetVal.time, tRetVal.avg(1:248,:))     
+    plot(t_data.time, t_data.avg(1:248,:))     
     axis tight;
     title(['MEG_', FileList(j).name(1:end-4)])
     PathFigure_beforeCleaning = [path2cleanfile 'figures\before_cleaning\'];
@@ -37,9 +42,9 @@ for j = 4:length (FileList) %
     saveas (gcf, ([PathFigure_beforeCleaning FileList(j).name(1:end-4)]), 'fig') % save MEG after cleaning figure to directory 
     close 
 %%
-    cleanMEG = RetVal;
-    for k = 1:length(RetVal.trial)
-        ind = find(RetVal.ChannelFlag_Bst{k} == -1);
+    cleanMEG = ft_data;
+    for k = 1:length(ft_data.trial)
+        ind = find(ft_data.ChannelFlag_Bst{k} == -1);
         cleanMEG.trial{k}(ind,:) = NaN; 
         cleanMEG.trial{k}(73,:) = NaN; % A231 für alle Probanden rausnehmen
         clear ind
@@ -48,16 +53,16 @@ for j = 4:length (FileList) %
     cleanMEG = setfield(cleanMEG, 'trialinfo', []);
         
     for p = 1:length(cleanMEG.trial)
-        cleanMEG.trialinfo.triggerchannel(p,:) = RetVal.trial{1,p}(272,1:end); 
-        cleanMEG.trialinfo.responsechannel(p,:) = RetVal.trial{1,p}(273,1:end); 
-        triggercode = find(ismember(RetVal.trial{p}(272,:),trigger.triggercodes));
+        cleanMEG.trialinfo.triggerchannel(p,:) = ft_data.trial{1,p}(272,1:end); 
+        cleanMEG.trialinfo.responsechannel(p,:) = ft_data.trial{1,p}(273,1:end); 
+        triggercode = find(ismember(ft_data.trial{p}(272,:),trigger.triggercodes));
         if ~isempty(triggercode)
-            cleanMEG.trialinfo.triggerlabel(p) = RetVal.trial{p}(272,triggercode(end));
+            cleanMEG.trialinfo.triggerlabel(p) = ft_data.trial{p}(272,triggercode(end));
         elseif isempty(triggercode)
-            triggercode = find(RetVal.trial{p}(272,:) >=110 & RetVal.trial{p}(272,:) ~=512);
-            cleanMEG.trialinfo.triggerlabel(p) = RetVal.trial{p}(272,triggercode(end));
+            triggercode = find(ft_data.trial{p}(272,:) >=110 & ft_data.trial{p}(272,:) ~=512);
+            cleanMEG.trialinfo.triggerlabel(p) = ft_data.trial{p}(272,triggercode(end));
         end
-        cleanMEG.trialinfo.response(p) = max(RetVal.trial{1,p}(273,:));
+        cleanMEG.trialinfo.response(p) = max(ft_data.trial{1,p}(273,:));
         switch cleanMEG.trialinfo.response(p)
             case 32
                 cleanMEG.trialinfo.response_label{p} = 'dislike';
@@ -135,7 +140,7 @@ for j = 4:length (FileList) %
     
   
     save ([path2cleanfile FileList(j).name], 'cleanMEG' )
-    clear cleanMEG RetVal   
+    clear cleanMEG ft_data   
 end
 
 end

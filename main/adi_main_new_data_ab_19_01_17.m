@@ -4,7 +4,8 @@
 
 %% main settings:
 clear
-brainstormPath     = 'E:\adidas\Daten_Franzi\Database12-2018\BS_TrainingGroup\brainstorm_db\';
+% brainstormPath     = 'E:\adidas\Daten_Franzi\Database12-2018\BS_TrainingGroup\brainstorm_db\';
+brainstormPath  = 'W:\neurochirurgie\science\Franzi\Database\BS_TrainingGroup\brainstorm_db\';
 fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
 ListSubj = dir(fieldtripPath);
 ListSubj(1:2) = [];
@@ -12,13 +13,14 @@ filter     = '0.5_95Hz';
     
  %% Export Brainstorm-Files to Fieldtrip:   
     
- for i = 27:length(ListSubj)    
+ for i = 1%:length(ListSubj)    
      path_export_bst2ft   = ([fieldtripPath ListSubj(i).name '\MEG_EEG_input\noisereduced\' filter '\02_Export_Bst2Ft\']);
      if ~exist(path_export_bst2ft, 'dir')
          mkdir(path_export_bst2ft)
      end  
     adi_select_files_newData (brainstormPath, ListSubj(i).name, path_export_bst2ft)
  end
+ 
  
  
 %% füge trigger und balldesign hinzu und entferne bad channels:
@@ -149,123 +151,6 @@ for i=1:length(ListSubj)
     adi_check_for_50ms_trigger(path2cleanfile, trigger, ListSubj(i).name)
 end
 
-%% svm für sensor daten Ball gbf
-
-clear
-path2subj = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
-subject_list = dir (path2subj);
-subject_list([1 2],:) = [];
-
-pattern.volley.labels = {'rwv'; 'ggv'; 'gbv'};
-pattern.space.labels = {'rws'; 'ggs'; 'gbs'};
-pattern.soccer.labels = {'rwf'; 'ggf'; 'gbf'};
-trigger.labels_short    = {'gbv', 'rws', 'rwf', 'ggv', 'gbs', 'gbf', 'rwv', 'ggs', 'ggf'}; 
-trigger.labels          = {'yellow_blue_volley', 'red_white_space', 'red_white_soccerball', 'grey_green_volley', 'yellow_blue_space', 'yellow_blue_soccerball', 'red_white_volley', 'grey_green_space', 'grey_green_soccerball'}; 
-trigger.triggerchannel  = [102, 104, 106, 108, 4196, 4198, 4200, 4202, 4204];
-trigger.eprime          = [102, 104, 106, 108, 101, 103, 105, 107, 109];
-% anpassen:
-freq = 'bp1_45Hz';
-balldesign = 'gbf';
-subject_list([1 2 16 18 24 25],:) = [];
-delete_runs={'nl_adi_06', '2'; 'nl_adi_17', '1'; 'nl_adi_24', '2'; 'nl_adi_25', '1'};
-
-load('U:\My Documents\MATLAB\atlas_source_indices.mat');
-sensordata_all_subj = struct('trial', [], 'time', [], 'response_label', [], 'balldesign_short', [],'label', [], 'fsample', [] ,'grad', [], 'cfg', []);
-
-for i=1:length(subject_list)
-    path2sensordata = ['W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\' subject_list(i).name '\MEG_analysis\noisereduced\1_95Hz\02_interpolated\' ];
-    [sensordata_all_subj] = adi_single_ball_sensordata(sensordata_all_subj, path2sensordata, subject_list(i).name, pattern, trigger, freq, balldesign, delete_runs, i);
-end
-
-session = sensordata_all_subj(1);
-   for k = 2:length(sensordata_all_subj)
-       session.trial = cat(2,session.trial, sensordata_all_subj(k).trial);
-       session.time = cat(2,session.time, sensordata_all_subj(k).time);
-       session.response_label = cat(2,session.response_label, sensordata_all_subj(k).response_label);
-       session.balldesign_short = cat(2,session.balldesign_short, sensordata_all_subj(k).balldesign_short);
-   end
-    
-   clearvars sensordata_all_subj
-   
-for p = 1:length(session.trial)
-    temp = session.trial{1,p};
-    session.data(p,:,:) = temp;
-    clear temp
-end
-   session = rmfield(session, 'trial');
-
-for k=1:length(session.response_label)
-    switch session.response_label{k}
-        case 'like' % 'Volley'
-            session.labels(k) = 1;
-        case 'Neu_Like' % 'Volley'
-            session.labels(k) = 1;
-        case 'dislike' % 'Space'
-            session.labels(k) = 2;
-        case 'Neu_Dislike' % 'Space'
-            session.labels(k) = 2;
-    end
-end
- 
-group_path = ['E:\adidas\fieldtrip_Auswertung\sensor_space\svm\' balldesign filesep];
-SVM_Guggenmos_virtsens (session, group_path, freq)
-
-cfg=[];
-avg = ft_timelockanalysis(cfg, session);
-figure
-plot(avg.time, avg.avg)
-like.trial=session.trial(find(session.labels==1));
-dislike.trial=session.trial(find(session.labels==2));
-like.time=session.time(find(session.labels==1));
-dislike.time=session.time(find(session.labels==2));
-
-like.label=session.label;
-dislike.label=session.label;
-
-cfg=[];
-avg_like = ft_timelockanalysis(cfg, like);
-avg_dislike = ft_timelockanalysis(cfg, dislike);
-figure
-plot(avg_like.time, avg_like.avg)
-title('avg_like')
-figure
-plot(avg_dislike.time, avg_dislike.avg)
-title('avg_dislike')
-%like
-for p = 1:length(like.trial)
-    temp = like.trial{1,p};
-    like.data(p,:,:) = temp;
-    clear temp
-end
-
-like.rms_mean=squeeze(rms(mean(like.data)));
-figure
-plot(avg.time, like.rms_mean)
-title('rms_like')
-
-%dislike:
-for p = 1:length(dislike.trial)
-    temp = dislike.trial{1,p};
-    dislike.data(p,:,:) = temp;
-    clear temp
-end
-
-dislike.rms_mean=squeeze(rms(mean(dislike.data)));
-figure
-plot(avg.time, dislike.rms_mean)
-title('rms_dislike')
-
-% calculate grand average for each condition
-cfg = [];
-cfg.channel   = 'all';
-cfg.latency   = 'all';
-cfg.parameter = 'avg';
-GA_FC         = ft_timelockgrandaverage(cfg,allsubjFC{:});  
-GA_FIC        = ft_timelockgrandaverage(cfg,allsubjFIC{:});
-% "{:}" means to use data from all elements of the variable
-
-
-
 %% export warped anatomy:
 clear
 brainstormPath     = 'E:\adidas\Daten_Franzi\Database12-2018\BS_TrainingGroup\brainstorm_db\';
@@ -303,14 +188,14 @@ end
 
 
 
-%% compute lcmv Beamformer and virtual sensors with noise-normalization for each subject- 
-% calculations of spatial filter, multiplies it with avgdata and runs Support
-% Vector machine
+%% compute lcmv Beamformer and virtual sensors for each subject- 
+% calculations of spatial filter, multiplies it with avgdata a
+
 clear
 fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
 ListSubj = dir(fieldtripPath);
 ListSubj(1:2) = [];
-for i = 4:length(ListSubj) 
+for i = 26%:length(ListSubj) 
      path2vol = [fieldtripPath ListSubj(i).name '\MEG_analysis\noisereduced\1_95Hz\vol\'];
      path2data = [fieldtripPath ListSubj(i).name '\MEG_analysis\noisereduced\1_95Hz\02_interpolated\'];
      path_T1warped_ft = ([fieldtripPath, ListSubj(i).name, '\MEG_EEG_input\T1_warped\']);
@@ -323,13 +208,324 @@ for i = 4:length(ListSubj)
    
 end
 
-%% single balldesign sourcespace: select and compute SVM:
+%%
+%% svm für sensor daten Ball gbf und gbv
 
 clear
 path2subj = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
 subject_list = dir (path2subj);
 subject_list([1 2],:) = [];
 
+pattern.volley.labels = {'rwv'; 'ggv'; 'gbv'};
+pattern.space.labels = {'rws'; 'ggs'; 'gbs'};
+pattern.soccer.labels = {'rwf'; 'ggf'; 'gbf'};
+trigger.labels_short    = {'gbv', 'rws', 'rwf', 'ggv', 'gbs', 'gbf', 'rwv', 'ggs', 'ggf'}; 
+trigger.labels          = {'yellow_blue_volley', 'red_white_space', 'red_white_soccerball', 'grey_green_volley', 'yellow_blue_space', 'yellow_blue_soccerball', 'red_white_volley', 'grey_green_space', 'grey_green_soccerball'}; 
+trigger.triggerchannel  = [102, 104, 106, 108, 4196, 4198, 4200, 4202, 4204];
+trigger.eprime          = [102, 104, 106, 108, 101, 103, 105, 107, 109];
+% anpassen:
+freq = 'bp1_45Hz';
+
+% balldesign = 'gbf';
+% subject_list([1 2 16 18 24 25],:) = [];
+% delete_runs={'nl_adi_06', '2'; 'nl_adi_17', '1'; 'nl_adi_24', '2'; 'nl_adi_25', '1'}; 
+
+balldesign = 'gbv';
+subject_list([12 19 25],:) = [];
+delete_runs={'nl_adi_05', '1'; 'nl_adi_05', '2'; 'nl_adi_07', '1'; 'nl_adi_09', '3'; 'nl_adi_10', '1';  'nl_adi_13', '1'; 'nl_adi_17', '1'; 'nl_adi_25', '1'; 'nl_adi_33', '1'; 'nl_adi_34', '1'}; 
+
+
+load('U:\My Documents\MATLAB\atlas_source_indices.mat');
+sensordata_all_subj = struct('trial', [], 'time', [], 'response_label', [], 'balldesign_short', [],'label', [], 'fsample', [] ,'grad', [], 'cfg', []);
+
+for i=1:length(subject_list)
+    path2sensordata = ['W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\' subject_list(i).name '\MEG_analysis\noisereduced\1_95Hz\02_interpolated\' ];
+    [sensordata_all_subj] = adi_single_ball_sensordata(sensordata_all_subj, path2sensordata, subject_list(i).name, pattern, trigger, freq, balldesign, delete_runs, i);
+end
+
+% nachträgliche Interpolation von Kanälen, da es nicht überall geklappt
+% hat:
+
+[sensordata_all_subj] = adi_additionalMEG_interpolation(sensordata_all_subj);
+
+% z-transformation:
+[sensordata_all_subj_zscore] = adi_ztrans_sensorspace(sensordata_all_subj);
+
+% clearvars sensordata_all_subj
+
+% statistic
+time=[0.5 0.8];
+adi_stats_sensorspace(sensordata_all_subj_zscore, time) % hier noch vervollstänidgen
+% 
+
+session = sensordata_all_subj_zscore(1);
+   for k = 2:length(sensordata_all_subj_zscore)
+       session.trial = cat(2,session.trial, sensordata_all_subj_zscore(k).trial);
+       session.time = cat(2,session.time, sensordata_all_subj_zscore(k).time);
+       session.response_label = cat(2,session.response_label, sensordata_all_subj_zscore(k).response_label);
+       session.balldesign_short = cat(2,session.balldesign_short, sensordata_all_subj_zscore(k).balldesign_short);
+   end
+   
+    
+for p = 1:length(session.trial)
+    temp = session.trial{1,p};
+    session.data(p,:,:) = temp;
+    clear temp
+end
+%    session = rmfield(session, 'trial');
+
+for k=1:length(session.response_label)
+    switch session.response_label{k}
+        case 'like' % 'Volley'
+            session.labels(k) = 1;
+        case 'Neu_Like' % 'Volley'
+            session.labels(k) = 1;
+        case 'dislike' % 'Space'
+            session.labels(k) = 2;
+        case 'Neu_Dislike' % 'Space'
+            session.labels(k) = 2;
+    end
+end
+% 
+[session] = regroup_session(session);
+adi_sanity_check_sensorspace(session)
+adi_stats_sensorspace(session) % hier noch vervollstänidgen
+% 
+group_path = ['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\svm\' balldesign filesep];
+SVM_Guggenmos_adapted (session, group_path, freq)
+% % SVM_Guggenmos_virtsens (session, group_path, freq)
+
+
+
+%% compute lcmv Beamformer and virtual sensors for each subject- 
+% anderes Zeitintervall für Covariance!!
+
+
+% calculations of spatial filter, multiplies it with avgdata 
+
+clear
+fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+ListSubj = dir(fieldtripPath);
+ListSubj(1:2) = [];
+for i = 24%:length(ListSubj) 
+     path2vol = [fieldtripPath ListSubj(i).name '\MEG_analysis\noisereduced\1_95Hz\vol\'];
+     path2data = [fieldtripPath ListSubj(i).name '\MEG_analysis\noisereduced\1_95Hz\02_interpolated\'];
+     path_T1warped_ft = ([fieldtripPath, ListSubj(i).name, '\MEG_EEG_input\T1_warped\']);
+%      Figoutpath = [fieldtripPath ListSubj(i).name '\MEG_analysis\noisereduced\1_95Hz\05_source_space\'];
+     outPath_extdisc = (['E:\Adidas\fieldtrip_Auswertung\single_subjects\'  ListSubj(i).name filesep 'MEG\sourcespace\']);
+     condition = {'like', 'dislike', 'dontcare'};
+   
+     adi_virtsens_perRun (path2vol, path2data, path_T1warped_ft, outPath_extdisc, 'bp1_45Hz', condition)
+   
+   
+end
+
+%% single balldesign: select, z-normalize and compute SVM (from virtual sensors):
+
+clear
+path2subj = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+subject_list = dir (path2subj);
+subject_list([1 2],:) = [];
+
+
+pattern.volley.labels = {'rwv'; 'ggv'; 'gbv'};
+pattern.space.labels = {'rws'; 'ggs'; 'gbs'};
+pattern.soccer.labels = {'rwf'; 'ggf'; 'gbf'};
+trigger.labels_short    = {'gbv', 'rws', 'rwf', 'ggv', 'gbs', 'gbf', 'rwv', 'ggs', 'ggf'}; 
+trigger.labels          = {'yellow_blue_volley', 'red_white_space', 'red_white_soccerball', 'grey_green_volley', 'yellow_blue_space', 'yellow_blue_soccerball', 'red_white_volley', 'grey_green_space', 'grey_green_soccerball'}; 
+trigger.triggerchannel  = [102, 104, 106, 108, 4196, 4198, 4200, 4202, 4204];
+trigger.eprime          = [102, 104, 106, 108, 101, 103, 105, 107, 109];
+% anpassen:
+freq = 'bp1_45Hz';
+
+% balldesign = 'gbf';
+% subject_list([1 2 16 18 24 25],:) = [];
+% delete_runs={'nl_adi_06', 2; 'nl_adi_17', 1; 'nl_adi_24', 2; 'nl_adi_25', 1};
+% 
+% balldesign = 'gbv';
+% subject_list([12 19 25],:) = [];
+% delete_runs={'nl_adi_05', [1 2]; 'nl_adi_07', 1; 'nl_adi_09', 3; 'nl_adi_10', 1;  'nl_adi_13', 1; 'nl_adi_17', 1; 'nl_adi_25', 1; 'nl_adi_33', 1; 'nl_adi_34', 1}; 
+
+% balldesign = 'rwf';
+% subject_list([2 16 17],:) = [];
+% delete_runs={'nl_adi_8', [1 2]; 'nl_adi_10', 1;  'nl_adi_11', 3; 'nl_adi_12', [1 2]; 'nl_adi_15' [1 2]; 'nl_adi_18', [1 2]; 'nl_adi_21', [1 2]; 'nl_adi_22', 1; 'nl_adi_25', 1; 'nl_adi_26', 1; 'nl_adi_28', 1}; 
+% 
+balldesign = 'ggf';
+delete_subjects = {'nl_adi_04'; 'nl_adi_07'; 'nl_adi_12'; 'nl_adi_18'; 'nl_adi_20'};
+for i=1:length(subject_list)
+    ind(i) = sum(strcmp (subject_list(i).name, delete_subjects));
+end
+subject_list(find(ind),:) = [];
+clear ind
+
+delete_runs={'nl_adi_17', 1; 'nl_adi_19', 1;  'nl_adi_21', [2 3]; 'nl_adi_23', 3; 'nl_adi_28' [1 2]; 'nl_adi_29', 1; 'nl_adi_34', [2 3]}; % adi28: run2 sollte auch gelöscht werden, existiert aber nicht in den Daten
+% 
+% balldesign = 'ggs';
+% delete_subjects = {'nl_adi_20'; 'nl_adi_29'; 'nl_adi_34'};
+% for i=1:length(subject_list)
+%     ind(i) = sum(strcmp (subject_list(i).name, delete_subjects));
+% end
+% subject_list(find(ind),:) = [];
+% clear ind
+% 
+% delete_runs={'nl_adi_04', 3; 'nl_adi_05', [2];  'nl_adi_10', [1]; 'nl_adi_15', 2; 'nl_adi_17' 1; 'nl_adi_22', [2 3]; 'nl_adi_23', [1 2]; 'nl_adi_28', [1]; 'nl_adi_33', 1} ; 
+
+
+load('U:\My Documents\MATLAB\atlas_source_indices.mat');
+virtsens_all_subj = struct('trial', [], 'time', [], 'response', [], 'response_label', [], 'balldesign', [], 'subject', []);
+
+
+for i=1:length(subject_list)
+    
+    path2virtsens = ['E:\adidas\fieldtrip_Auswertung\single_subjects\' subject_list(i).name '\MEG\sourcespace\virtsens\' ];
+    dir_out = ['E:\adidas\fieldtrip_Auswertung\single_subjects\' subject_list(i).name '\MEG\sourcespace\virtsens\' balldesign filesep];
+    [virtsens_all_subj] = adi_vs_single_ball(virtsens_all_subj, path2virtsens, dir_out, subject_list(i).name, pattern, trigger, freq, balldesign, delete_runs, i);
+end
+
+% z-transformation:
+[virtsens_all_subj_zscore] = adi_ztrans_sensorspace(virtsens_all_subj); %evtl. function noch umbenennen
+clearvars virtsens_all_subj
+
+[virtsens_all_subj_zscore] = adi_additionalMEG_interpolation(virtsens_all_subj_zscore, 'virtsens');
+
+session = virtsens_all_subj_zscore(1);
+   for k = 2:length(virtsens_all_subj_zscore)
+       session.trial = cat(2,session.trial, virtsens_all_subj_zscore(k).trial);
+       session.time = cat(2,session.time, virtsens_all_subj_zscore(k).time);
+       session.response = cat(2,session.response, virtsens_all_subj_zscore(k).response);
+       session.response_label = cat(2,session.response_label, virtsens_all_subj_zscore(k).response_label);
+       session.balldesign = cat(2,session.balldesign, virtsens_all_subj_zscore(k).balldesign);
+   end
+    
+for p = 1:length(session.trial)
+    temp = session.trial{1,p};
+    session.data(p,:,:) = temp;
+    clear temp
+end
+%    session = rmfield(session, 'trial');
+
+for k=1:length(session.response_label)
+    switch session.response_label{k}
+        case 'like' % 'Volley'
+            session.labels(k) = 1;
+        case 'Neu_Like' % 'Volley'
+            session.labels(k) = 1;
+        case 'dislike' % 'Space'
+            session.labels(k) = 2;
+        case 'Neu_Dislike' % 'Space'
+            session.labels(k) = 2;
+    end
+end
+ 
+[session] = regroup_session(session);    
+% adi_sanity_check_sensorspace(sessions)
+% group_path = 'E:\adidas\fieldtrip_Auswertung\group_analysis\source_space\MEG\new_data\gbf_ball\svm\';
+% SVM_Guggenmos_virtsens (session, group_path, freq)
+% SVM_Guggenmos_adapted2 (session, group_path, freq)
+% SVM_Guggenmos_adapted_sourcespace (session, group_path, freq) % ohne noise whitening, funktioniert aber schlechter
+
+%% source statistic
+
+group_path = 'E:\adidas\fieldtrip_Auswertung\group_analysis\source_space\MEG\new_data\ggs_ball\stats\';
+time = [0 1]; % in s
+adi_stats_sourcespace(session, time, group_path, 'ggs') 
+
+
+
+
+%% statistische Analyse bei adi 05 und ggs ball; 
+
+clear
+path2subj = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+subject_list = dir (path2subj);
+subject_list([1 2],:) = [];
+
+pattern.volley.labels = {'rwv'; 'ggv'; 'gbv'};
+pattern.space.labels = {'rws'; 'ggs'; 'gbs'};
+pattern.soccer.labels = {'rwf'; 'ggf'; 'gbf'};
+trigger.labels_short    = {'gbv', 'rws', 'rwf', 'ggv', 'gbs', 'gbf', 'rwv', 'ggs', 'ggf'}; 
+trigger.labels          = {'yellow_blue_volley', 'red_white_space', 'red_white_soccerball', 'grey_green_volley', 'yellow_blue_space', 'yellow_blue_soccerball', 'red_white_volley', 'grey_green_space', 'grey_green_soccerball'}; 
+trigger.triggerchannel  = [102, 104, 106, 108, 4196, 4198, 4200, 4202, 4204];
+trigger.eprime          = [102, 104, 106, 108, 101, 103, 105, 107, 109];
+% anpassen:
+freq = 'bp1_45Hz';
+delete_runs={} ; 
+
+balldesign = 'ggv';
+
+load('U:\My Documents\MATLAB\atlas_source_indices.mat');
+virtsens_all_subj = struct('trial', [], 'time', [], 'response', [], 'response_label', [], 'balldesign', [], 'subject', []);
+
+
+for i=3%1:length(subject_list)
+    
+    path2virtsens = ['E:\adidas\fieldtrip_Auswertung\single_subjects\' subject_list(i).name '\MEG\sourcespace\virtsens\' ];
+    dir_out = ['E:\adidas\fieldtrip_Auswertung\single_subjects\' subject_list(i).name '\MEG\sourcespace\virtsens\' balldesign filesep];
+    [virtsens_all_subj] = adi_vs_single_ball(virtsens_all_subj, path2virtsens, dir_out, subject_list(i).name, pattern, trigger, freq, balldesign, delete_runs, i);
+end
+
+virtsens_all_subj(1:i-1)=[];
+% z-transformation:
+[virtsens_all_subj_zscore] = adi_ztrans_sensorspace(virtsens_all_subj); %evtl. function noch umbenennen
+clearvars virtsens_all_subj
+
+[virtsens_all_subj_zscore] = adi_additionalMEG_interpolation(virtsens_all_subj_zscore, 'virtsens');
+
+session = virtsens_all_subj_zscore(1);
+   for k = 2:length(virtsens_all_subj_zscore)
+       session.trial = cat(2,session.trial, virtsens_all_subj_zscore(k).trial);
+       session.time = cat(2,session.time, virtsens_all_subj_zscore(k).time);
+       session.response = cat(2,session.response, virtsens_all_subj_zscore(k).response);
+       session.response_label = cat(2,session.response_label, virtsens_all_subj_zscore(k).response_label);
+       session.balldesign = cat(2,session.balldesign, virtsens_all_subj_zscore(k).balldesign);
+   end
+   
+   
+session = virtsens_all_subj_zscore(1);
+   for k = 2:length(virtsens_all_subj_zscore)
+       session.trial = cat(2,session.trial, virtsens_all_subj_zscore(k).trial);
+       session.time = cat(2,session.time, virtsens_all_subj_zscore(k).time);
+       session.response = cat(2,session.response, virtsens_all_subj_zscore(k).response);
+       session.response_label = cat(2,session.response_label, virtsens_all_subj_zscore(k).response_label);
+       session.balldesign = cat(2,session.balldesign, virtsens_all_subj_zscore(k).balldesign);
+   end
+    
+for p = 1:length(session.trial)
+    temp = session.trial{1,p};
+    session.data(p,:,:) = temp;
+    clear temp
+end
+%    session = rmfield(session, 'trial');
+
+for k=1:length(session.response_label)
+    switch session.response_label{k}
+        case 'like' % 'Volley'
+            session.labels(k) = 1;
+        case 'Neu_Like' % 'Volley'
+            session.labels(k) = 1;
+        case 'dislike' % 'Space'
+            session.labels(k) = 2;
+        case 'Neu_Dislike' % 'Space'
+            session.labels(k) = 2;
+    end
+end
+ 
+[session_ggv] = regroup_session(session);    
+
+group_path = 'E:\adidas\fieldtrip_Auswertung\group_analysis\source_space\MEG\new_data\rwf_ball\nl_adi_06\stats\';
+time = [0 1]; % in s
+% adi_stats_sourcespace(session_28, time, group_path, 'rwf') 
+
+
+
+
+
+   %% select first run and compute svm
+   
+clear
+path2subj = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+subject_list = dir (path2subj);
+subject_list([1 2],:) = [];
 
 pattern.volley.labels = {'rwv'; 'ggv'; 'gbv'};
 pattern.space.labels = {'rws'; 'ggs'; 'gbs'};
@@ -349,9 +545,7 @@ delete_runs={'nl_adi_06', '2'; 'nl_adi_17', '1'; 'nl_adi_24', '2'; 'nl_adi_25', 
 load('U:\My Documents\MATLAB\atlas_source_indices.mat');
 virtsens_all_subj = struct('trial', [], 'time', [], 'response', [], 'response_label', [], 'balldesign', []);
 
-
 for i=1:length(subject_list)
-    
     path2virtsens = ['E:\adidas\fieldtrip_Auswertung\single_subjects\' subject_list(i).name '\MEG\sourcespace\virtsens\' ];
     dir_out = ['E:\adidas\fieldtrip_Auswertung\single_subjects\' subject_list(i).name '\MEG\sourcespace\virtsens\' balldesign filesep];
     [virtsens_all_subj] = adi_vs_single_ball(virtsens_all_subj, path2virtsens, dir_out, subject_list(i).name, pattern, trigger, freq, balldesign, delete_runs, i);
@@ -373,7 +567,7 @@ for p = 1:length(session.trial)
     session.data(p,:,:) = temp;
     clear temp
 end
-   session = rmfield(session, 'trial');
+session = rmfield(session, 'trial');
 
 for k=1:length(session.response_label)
     switch session.response_label{k}
@@ -388,19 +582,74 @@ for k=1:length(session.response_label)
     end
 end
  
-
    group_path = 'E:\adidas\fieldtrip_Auswertung\group_analysis\source_space\MEG\new_data\gbf_ball\svm\';
    SVM_Guggenmos_virtsens (session, group_path, freq)
 
-%%sensor daten
-% data=cell(1,size(session.data,1));
-% for i=1:size(session.data,1)
-%     data{i}=squeeze(session.data(i,:,:));
-% 
-% end
+  
+%% select and compute SVM from single ball (from virtual sensors): Covariance Test
 
+clear
+path2subj = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+subject_list = dir (path2subj);
+subject_list([1 2],:) = [];
 
+pattern.volley.labels = {'rwv'; 'ggv'; 'gbv'};
+pattern.space.labels = {'rws'; 'ggs'; 'gbs'};
+pattern.soccer.labels = {'rwf'; 'ggf'; 'gbf'};
+trigger.labels_short    = {'gbv', 'rws', 'rwf', 'ggv', 'gbs', 'gbf', 'rwv', 'ggs', 'ggf'}; 
+trigger.labels          = {'yellow_blue_volley', 'red_white_space', 'red_white_soccerball', 'grey_green_volley', 'yellow_blue_space', 'yellow_blue_soccerball', 'red_white_volley', 'grey_green_space', 'grey_green_soccerball'}; 
+trigger.triggerchannel  = [102, 104, 106, 108, 4196, 4198, 4200, 4202, 4204];
+trigger.eprime          = [102, 104, 106, 108, 101, 103, 105, 107, 109];
+% anpassen:
+freq = 'bp1_45Hz';
+balldesign = 'gbf';
+subject_list([1 2 16 18 24 25],:) = [];
+delete_runs={'nl_adi_06', '2'; 'nl_adi_17', '1'; 'nl_adi_24', '2'; 'nl_adi_25', '1'};
 
+% subject_list (2:29,:) = [];
+
+load('U:\My Documents\MATLAB\atlas_source_indices.mat');
+virtsens_all_subj = struct('trial', [], 'time', [], 'response', [], 'response_label', [], 'balldesign', []);
+
+for i=1:length(subject_list)
+    path2virtsens = ['E:\adidas\fieldtrip_Auswertung\single_subjects\' subject_list(i).name '\MEG\sourcespace\Covariance_Test\virtsens\' ];
+    dir_out = ['E:\adidas\fieldtrip_Auswertung\single_subjects\' subject_list(i).name '\MEG\sourcespace\Covariance_Test\virtsens\' balldesign filesep];
+    [virtsens_all_subj] = adi_vs_single_ball(virtsens_all_subj, path2virtsens, dir_out, subject_list(i).name, pattern, trigger, freq, balldesign, delete_runs, i);
+end
+
+session = virtsens_all_subj(1);
+   for k = 2:length(virtsens_all_subj)
+       session.trial = cat(2,session.trial, virtsens_all_subj(k).trial);
+       session.time = cat(2,session.time, virtsens_all_subj(k).time);
+       session.response = cat(2,session.response, virtsens_all_subj(k).response);
+       session.response_label = cat(2,session.response_label, virtsens_all_subj(k).response_label);
+       session.balldesign = cat(2,session.balldesign, virtsens_all_subj(k).balldesign);
+   end
+    
+   clearvars virtsens_all_subj
+   
+for p = 1:length(session.trial)
+    temp = session.trial{1,p};
+    session.data(p,:,:) = temp;
+    clear temp
+end
+session = rmfield(session, 'trial');
+
+for k=1:length(session.response_label)
+    switch session.response_label{k}
+        case 'like' % 'Volley'
+            session.labels(k) = 1;
+        case 'Neu_Like' % 'Volley'
+            session.labels(k) = 1;
+        case 'dislike' % 'Space'
+            session.labels(k) = 2;
+        case 'Neu_Dislike' % 'Space'
+            session.labels(k) = 2;
+    end
+end
+ 
+   group_path = 'E:\adidas\fieldtrip_Auswertung\group_analysis\source_space\MEG\new_data\gbf_ball\Covariance_Test\svm\';
+   SVM_Guggenmos_virtsens (session, group_path, freq)
 
 %% compute virtual sensors mit noisenormalization for each subject and do a group analysis: like, dislike, dontcare  - 
 
@@ -592,13 +841,13 @@ for i = 3%:length(ListSubj)
      condition = {'like', 'dislike'};
      adi_source_avg_perRun (path2vol, path2data, path_T1warped_ft, outPath_extdisc, 'bp1_45Hz', condition)
 end
+
 %%
 clear
 path2subj = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
 subject_list = dir (path2subj);
 subject_list([1 2],:) = [];
 filter = 'bp1_45Hz';
-
 
 like.run1=source_avg1.run1.like.avg.pow(source_avg1.run1.like.inside==1);
 like.run2=source_avg2.run2.like.avg.pow(source_avg2.run2.like.inside==1);

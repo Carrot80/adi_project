@@ -1,0 +1,31 @@
+function [session]=adi_regroup_session(session)
+
+
+
+
+like.trial=session.trial(find(session.labels==1));
+dislike.trial=session.trial(find(session.labels==2));
+like.time=session.time(find(session.labels==1));
+dislike.time=session.time(find(session.labels==2));
+
+session=rmfield(session, 'trial');
+session=rmfield(session, 'data');
+session=rmfield(session, 'labels');
+
+session.labels=zeros(1,length(like.trial)+length(dislike.trial));
+session.labels(1:length(like.trial))=ones(1,length(like.trial));
+session.labels(length(like.trial)+1:end)=2*ones(1,length(dislike.trial));
+
+session.trial=[like.trial dislike.trial];
+
+for i=1:length(session.trial)
+   session.data(i,:,:)=session.trial{i};     
+end
+
+clearvars like dislike
+
+
+
+
+
+end
