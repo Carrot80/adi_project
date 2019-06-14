@@ -18,7 +18,6 @@ function  adi_appenddata(inPath, outPath, filter)
                     [~, cleanMEG_interp] = checkfields (var(2), cleanMEG_interp); 
          end
         var(:,i) = cleanMEG_interp;
-        var(i).run = str2double(files_dislike(i).name(end-4));
         clear cleanMEG_interp
     end
 
@@ -36,7 +35,7 @@ function  adi_appenddata(inPath, outPath, filter)
 %% like 
     if ~exist (strcat(outPath, 'like_allRuns_', filter, '.mat'))
 
-        files_like = dir(fullfile(inPath, '*Like*.mat'));
+        files_like = dir(fullfile(inPath, '*like*.mat'));
         size_files_like = size(files_like);
 
         for i = 1:(size_files_like(1,1))

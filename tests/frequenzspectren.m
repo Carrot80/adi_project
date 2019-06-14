@@ -37,12 +37,14 @@ semilogy(f, pxx)
 
 ns_avg=ns_avg';
 
+sensordata_all_subj(8)
+
 cfg=[];
-avg=ft_timelockanalysis(cfg, sessions.data);
+avg=ft_timelockanalysis(cfg, sensordata_all_subj(8));
 
 avg=squeeze(mean(avg_data_dislike.trial));
 sRate=256;    
-[FourRef,Fref]=fftBasic(avg,round(sRate));
+[FourRef,Fref]=fftBasic(sensordata_all_subj(8).trial{1,1},round(sRate));
 figure
 plot(FourRef, Fref)
 

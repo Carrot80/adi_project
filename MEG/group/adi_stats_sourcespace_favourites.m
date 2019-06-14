@@ -1,4 +1,4 @@
-function stats(time, grouppath, balldesigns, balldesigns_names, roi)
+function stats(time, grouppath, balldesigns, balldesigns_names, roi, condition)
 
 % channels raussuchen (ohne Kleinhirn, Thalamus, Basalganglien)
 load ('U:\My Documents\MATLAB\atlas_clusterstatistic_ohne_cerebellum_thalamus_basalganglien.mat')
@@ -6,9 +6,11 @@ load ('U:\My Documents\MATLAB\atlas_clusterstatistic_ohne_cerebellum_thalamus_ba
 % for k=1:length(atlas_cluster)
 %     atlas_cluster(k,4)={k}; 
 % end
-data_like = struct();
-data_dislike = struct();
-    ind_cluster = cell2mat(atlas_cluster(:,3));    
+
+cond.(condition)=struct();
+ind_cluster = cell2mat(atlas_cluster(:,3));   
+    
+    
 if ~isempty(roi)
     
     ind=zeros(1,1);
@@ -24,13 +26,12 @@ if ~isempty(roi)
     for k=1:length(balldesigns)
         data.(balldesigns{k}) = load ([grouppath balldesigns{k} '_ball\session_' balldesigns{k} '.mat']); 
         data.(balldesigns{k}).session.data=data.(balldesigns{k}).session.data(:,vox_index,:);
-        [data.(balldesigns{k}).session, data_like, data_dislike] = regroup_data(data.(balldesigns{k}).session, data_like, data_dislike, k); 
+        [data.(balldesigns{k}).session, cond] = regroup_data(data.(balldesigns{k}).session, cond, k, condition); 
     end
     for k=1:length(vox_index)
         label{k} = [num2str(atlas_cluster{vox_index(k),3}) '_' atlas_cluster{vox_index(k),2}]; 
     end
-    
-    
+
 else
     ind_cluster = cell2mat(atlas_cluster(:,3));
 
@@ -42,7 +43,7 @@ else
            else
                 data.(balldesigns{k}).session.data=data.(balldesigns{k}).session.data(:,ind_cluster,:);
            end
-        [data.(balldesigns{k}).session, data_like, data_dislike] = regroup_data(data.(balldesigns{k}).session, data_like, data_dislike, k); 
+        [data.(balldesigns{k}).session, cond] = regroup_data(data.(balldesigns{k}).session, cond, k, condition); 
 
     end   
     
@@ -53,89 +54,79 @@ else
 end
 
    
-trials_like = [];
-trials_dislike = [];
-for p = 1:size(data_like.trial, 1)   
-    trials_like{p} = squeeze(data_like.trial(p,:,:));
-    trials_dislike{p} = squeeze(data_dislike.trial(p,:,:));   
+trials = [];
+
+for p = 1:size(cond.(condition).trial, 1)   
+    trials{p} = squeeze(cond.(condition).trial(p,:,:));
 end
 
-data_like.trial = trials_like;
-data_dislike.trial = trials_dislike;
-clearvars trials_like trials_dislike
+data_cond.trial = trials;
 
 k=1;
-data_like.label = label';
+data_cond.label = label';
 % data_like.dimord = 'rpt_chan_time';
-data_like.time = repmat(data.(balldesigns{k}).session.time(1), 1, size(data_like.trial,2));
+data_cond.time = repmat(data.(balldesigns{k}).session.time(1), 1, size(data_cond.trial,2));
 
-data_dislike.label = label';
-% data_dislike.dimord = 'rpt_chan_time';
-data_dislike.time = repmat(data.(balldesigns{k}).session.time(1), 1, size(data_dislike.trial,2));
 
-for i=1:length(data_like.balldesign)
-    switch char(data_like.balldesign{i})
+for i=1:length(cond.(condition).balldesign)
+    switch char(cond.(condition).balldesign{i})
         
         case balldesigns_names{1}
-            data_like.balldesign_num(i) = 1;
+            data_cond.balldesign_num(i) = 1;
         case balldesigns_names{2}
-            data_like.balldesign_num(i) = 2;
+            data_cond.balldesign_num(i) = 2;
         case balldesigns_names{3}
-            data_like.balldesign_num(i) = 3;
+            data_cond.balldesign_num(i) = 3;
         case balldesigns_names{4}
-            data_like.balldesign_num(i) = 4;
+            data_cond.balldesign_num(i) = 4;
     end
    
 end
 
-counts=histcounts(data_like.balldesign_num);
+counts=histcounts(data_cond.balldesign_num);
 [indx_min_counts ] = find(counts==min(counts));
 trls_min = min(counts);
 
-find(data_like.balldesign_num==1)
-find(data_like.balldesign_num==2)
-find(data_like.balldesign_num==3)
-find(data_like.balldesign_num==4)
-
-like=[data_like.trial(randperm(counts(1), trls_min)) data_like.trial(counts(1)+randperm(counts(2), trls_min)) data_like.trial(counts(1)+counts(2)+randperm(counts(3), trls_min)) data_like.trial(counts(1)+counts(2)+counts(3)+randperm(counts(4), trls_min))];
-dislike=[data_dislike.trial(randperm(counts(1), trls_min)) data_dislike.trial(counts(1)+randperm(counts(2), trls_min)) data_dislike.trial(counts(1)+counts(2)+randperm(counts(3), trls_min)) data_dislike.trial(counts(1)+counts(2)+counts(3)+randperm(counts(4), trls_min))];
-
-balldesign_like=[data_like.balldesign(randperm(counts(1), trls_min)) data_like.balldesign(counts(1)+randperm(counts(2), trls_min)) data_like.balldesign(counts(1)+counts(2)+randperm(counts(3), trls_min)) data_like.balldesign(counts(1)+counts(2)+counts(3)+randperm(counts(4), trls_min))];
-balldesign_dislike=[data_dislike.balldesign(randperm(counts(1), trls_min)) data_dislike.balldesign(counts(1)+randperm(counts(2), trls_min)) data_dislike.balldesign(counts(1)+counts(2)+randperm(counts(3), trls_min)) data_dislike.balldesign(counts(1)+counts(2)+counts(3)+randperm(counts(4), trls_min))];
-time_red = [data_like.time(1:trls_min) data_like.time(counts(1)+1:counts(1)+trls_min) data_like.time(counts(1)+counts(2)+1:counts(1)+counts(2)+trls_min) data_like.time(counts(1)+counts(2)+counts(3)+1:counts(1)+counts(2)+counts(3)+trls_min)];
-
-response_like=[data_like.response_label(1:trls_min) data_like.response_label(counts(1)+1:counts(1)+trls_min) data_like.response_label(counts(1)+counts(2)+1:counts(1)+counts(2)+trls_min) data_like.response_label(counts(1)+counts(2)+counts(3)+1:counts(1)+counts(2)+counts(3)+trls_min)];
-response_dislike=[data_dislike.response_label(1:trls_min) data_dislike.response_label(counts(1)+1:counts(1)+trls_min) data_dislike.response_label(counts(1)+counts(2)+1:counts(1)+counts(2)+trls_min) data_dislike.response_label(counts(1)+counts(2)+counts(3)+1:counts(1)+counts(2)+counts(3)+trls_min)];
+like=[data_cond.trial(randperm(counts(1), trls_min)) data_cond.trial(counts(1)+randperm(counts(2), trls_min)) data_cond.trial(counts(1)+counts(2)+randperm(counts(3), trls_min))];
+balldesign_like=[cond.(condition).balldesign(randperm(counts(1), trls_min)) cond.(condition).balldesign(counts(1)+randperm(counts(2), trls_min)) cond.(condition).balldesign(counts(1)+counts(2)+randperm(counts(3), trls_min)) ];
+time_red = [data_cond.time(1:trls_min) data_cond.time(counts(1)+1:counts(1)+trls_min) data_cond.time(counts(1)+counts(2)+1:counts(1)+counts(2)+trls_min)];
+response_like=[cond.(condition).response_label(1:trls_min) cond.(condition).response_label(counts(1)+1:counts(1)+trls_min) cond.(condition).response_label(counts(1)+counts(2)+1:counts(1)+counts(2)+trls_min)];
 
 data_like.trial=like;
-data_dislike.trial=dislike;
 data_like.balldesign=balldesign_like;
-data_dislike.balldesign=balldesign_dislike;
 data_like.time = time_red;
-data_dislike.time = time_red;
 data_like.response_label = response_like;
-data_dislike.response_label = response_dislike;
+data_like.label=label';
 
+data_dislike.trial(661:670)=[];
+data_dislike.trial(326:335)=[];
 
-%% https://onlinelibrary.wiley.com/doi/epdf/10.1111/psyp.13335
+data_dislike.balldesign(661:670)=[];
+data_dislike.balldesign(326:335)=[];
+
+data_dislike.time(661:670)=[];
+data_dislike.time(326:335)=[];
+
+%%
 cfg = [];
 cfg.latency = time;
 cfg.method           = 'montecarlo';    % use the Monte Carlo Method to calculate the significance probability
 cfg.statistic        = 'ft_statfun_indepsamplesT'; % independent t-test statt dependent t-test
 cfg.correctm         = 'cluster';
+cfg.correcttail = 'prob';
 cfg.clusterthreshold = 'nonparametric_common';
 cfg.clusteralpha     = 0.05;     % alpha level of the sample-specific test statistic that will be used for thresholding                               % will be used for thresholding
 cfg.clusterstatistic = 'maxsum';
 cfg.clustercritval = 0.05;                               % in the clustering algorithm (default=0).
 cfg.tail             = 0;
 cfg.clustertail      = 0;
-cfg.alpha            = 0.025;   % alpha level of the permutation test
+cfg.alpha            = 0.05;   % alpha level of the permutation test
 cfg.numrandomization = 500;      % number of draws from the permutation distribution
 cfg.minnbchan = 2;  % minimum number of neighborhood channels that is required for a selected sample to be included
 % cfg.parameter = 'individual'; % oder cfg.parameter = 'trial';
 % ntrials_cond = histc(sessions.labels, unique(sessions.labels));
 ntrials_cond = [length(data_like.trial) length(data_dislike.trial)];
-design  = zeros(2,min(ntrials_cond)+min(ntrials_cond))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             ;
+design  = zeros(2,min(ntrials_cond)+min(ntrials_cond));
 design(1,1:min(ntrials_cond)) = 1;
 design(1,min(ntrials_cond)+1:min(ntrials_cond)+min(ntrials_cond)) = 2;
 
@@ -202,10 +193,10 @@ raweffectLike_vs_Dislike = ft_math(cfg,like_avg_selected,dislike_avg_selected); 
 
 % Then, find which clusters are significant, outputting their indices as held in stat.posclusters
 % In case you have downloaded and loaded the data, ensure stat.cfg.alpha exist
-% if ~isfield(stat.cfg,'alpha') 
-    stat.cfg.alpha = 0.025;
+if ~isfield(stat.cfg,'alpha') 
+    stat.cfg.alpha = 0.05;
 
-% end % stat.cfg.alpha was moved as the downloaded data was processed by an additional FieldTrip function to anonymize the data.
+end % stat.cfg.alpha was moved as the downloaded data was processed by an additional FieldTrip function to anonymize the data.
 
 for i=1:size(stat.posclusters,2)
     poscluster_pval(i)= stat.posclusters(i).prob;
@@ -240,14 +231,6 @@ pos_neg = pos+neg;
 ind_sum_pos_neg=find(sum(pos_neg));
 sign_time = stat.time(ind_sum_pos_neg);
 
-switch length(balldesigns)
-    case 5
-        balldesign = [balldesigns{1} '_' balldesigns{2} '_' balldesigns{3} '_' balldesigns{4} '_' balldesigns{5}];
-    case 4
-         balldesign = [balldesigns{1} '_' balldesigns{2} '_' balldesigns{3} '_' balldesigns{4}];
-    case 3
-        balldesign = [balldesigns{1} '_' balldesigns{2} '_' balldesigns{3}];
-end
 
 for k=1:length(sign_time)
 
@@ -267,7 +250,7 @@ for k=1:length(sign_time)
         roi_name = atlas_cluster(temp(1),2);
         scatter3(chanpos(ind,1),chanpos(ind,2),chanpos(ind,3), [], raweffectLike_vs_Dislike.avg(ind, ind_sum_pos_neg(k)), 'filled')
         h_legend = legend({'brain', char(roi_name)}, 'Location','Northeast')  ;  
-
+        clearvars roi_name  
     else 
         for i=1:length(unique(roi_num))
             unique_roi = unique(roi_num);
@@ -278,7 +261,7 @@ for k=1:length(sign_time)
 
         scatter3(chanpos(ind,1),chanpos(ind,2),chanpos(ind,3), [], raweffectLike_vs_Dislike.avg(ind, ind_sum_pos_neg(k)), 'filled')
         h_legend = legend({'brain', char(roi_name)}, 'Location','Northeast') ;   
-
+        clearvars roi_name  
     end
 
     title([balldesign ' ' num2str(sign_time(k)) ' s' ])
@@ -302,6 +285,8 @@ end
 
 savefig(h, [grouppath balldesign '_sign_clusters.fig'])
 close(h)
+
+
 
 myVideo = VideoWriter([balldesign '_movie' '.avi']);
 myVideo.FrameRate = 2;  % Default 30
@@ -500,82 +485,189 @@ switch method
     end
 end
 
-function [data, data_like, data_dislike]=regroup_data(data, data_like, data_dislike, k)
+function [data, cond]=regroup_data(data, cond, k, condition)
 
-ind_like=find(data.labels==1);
-ind_dislike=find(data.labels==2);
-
-like = data.data(ind_like,:,:);
-dislike = data.data(ind_dislike,:,:);
-
-
-ntrials_cond = histc(data.labels, unique(data.labels));
-smaller_cond.label = find(ntrials_cond==min(ntrials_cond));
-switch smaller_cond.label
-    case 1
-       smaller_cond.name = 'like';
-    case 2
-       smaller_cond.name = 'dislike';
+switch condition
+    case 'like'
+        ind_cond=find(data.labels==1);
+        trials = data.data(ind_cond,:,:);
+        
+    case 'dislike'
+        ind_cond=find(data.labels==2);
+        trials = data.data(ind_cond,:,:);
 end
-
-cond_tall.label = find(ntrials_cond==max(ntrials_cond));
-ind_trial_perm = randperm(max(ntrials_cond), min(ntrials_cond));
-
-
-switch cond_tall.label
-    case 1
-       cond_tall.name = 'like';
-       like = like(ind_trial_perm,:,:);
-    case 2
-       cond_tall.name = 'dislike';
-       dislike = dislike(ind_trial_perm,:,:);
-end   
-
-% data.(balldesigns{k}).data = cat(1, like, dislike);
-% data.(balldesigns{k}).labels = [ones(1, size(like,1)), ones(1, size(dislike,1))*2];
 
 switch k
     
     case 1
-        data_like.trial = like;  
-        data_dislike.trial = dislike;  
-
-        switch cond_tall.label
-            case 1
-               cond_tall.name = 'like';
-                  data_like.response_label = data.response_label(ind_trial_perm);
-                  data_dislike.response_label = data.response_label(ind_dislike);
-                  data_like.balldesign = data.balldesign(ind_trial_perm);
-                  data_dislike.balldesign = data.balldesign(ind_dislike);
-            case 2
-               cond_tall.name = 'dislike';
-                data_dislike.response_label = data.response_label(ind_trial_perm,:,:);
-                data_like.response_label = data.response_label(ind_like,:,:);
-                data_dislike.balldesign = data.balldesign(ind_trial_perm);
-                data_like.balldesign = data.balldesign(ind_like);
-        end   
+        cond.(condition).trial = trials;  
+        cond.(condition).response_label = data.response_label(ind_cond);
+        cond.(condition).balldesign = data.balldesign(ind_cond);
     otherwise
-        data_like.trial = cat(1, data_like.trial, like);
-        data_dislike.trial = cat(1, data_dislike.trial, dislike);
-        switch cond_tall.label
-            case 1
-                data_like.balldesign = [data_like.balldesign, data.balldesign(ind_trial_perm)];
-                data_dislike.balldesign = [data_dislike.balldesign data.balldesign(ind_dislike)];
-                data_like.response_label = [data_like.response_label data.response_label(ind_trial_perm)];
-                data_dislike.response_label = [data_dislike.response_label, data.response_label(ind_dislike)];
-
-            case 2  
-                data_dislike.balldesign = [data_dislike.balldesign data.balldesign(ind_trial_perm)];
-                data_like.balldesign = [data_like.balldesign data.balldesign(ind_like)];
-                data_dislike.response_label = [data_dislike.response_label data.response_label(ind_trial_perm)];
-                data_like.response_label = [data_like.response_label data.response_label(ind_like)];
-        end
-        
+        cond.(condition).trial = cat(1, cond.(condition).trial, trials);
+        cond.(condition).balldesign = [cond.(condition).balldesign, data.balldesign(ind_cond)];
+        cond.(condition).response_label = [cond.(condition).response_label data.response_label(ind_cond)];
 end
 
-clearvars like dislike
+end
+
+
+function test()
+
+ for i=1:size(virtsens_all_subj_zscore(1).trial{1,1},1)
+      label{i}=num2str(i);
+ end
+ 
+cfg=[];
+for k=1:length(virtsens_all_subj_zscore)
+    
+    virtsens_all_subj_zscore(k).label = label';
+    rws_virtsens_all_avg{k} = ft_timelockanalysis(cfg, virtsens_all_subj_zscore(k))
+
+end
+
+cfg = [];
+cfg.channel   = 'all';
+cfg.keepindividual = 'yes';
+cfg.latency   = 'all';
+cfg.parameter = 'avg';
+
+rws_dislike = ft_timelockgrandaverage(cfg, rws_virtsens_all_avg{:});
+
+
+%------------------------------------
+dislike=gbs_dislike;
+dislike.individual = cat(1, gbs_dislike.individual, ggs_dislike.individual, rws_dislike.individual)
+
+like=rwf_like;
+like.individual = cat(1, rwf_like.individual, ggv_like.individual, rwv_like.individual)
+like.label =label';
+dislike.label =label';
+dislike.individual = dislike.individual(:, ind_cluster, :);
+like.individual = like.individual(:, ind_cluster, :);
 
 
 
+ for i=1:1213
+      label{i}=num2str(i);
+ end
+
+ for i=1:size(dislike.individual,1)
+     time_s{i}=rws_dislike.time;
+ end
+ 
+dislike.time=time_s
+like.time=time_s;
+
+trials = [];
+
+for p = 1:size(like.individual, 1)   
+    trials_like{p} = squeeze(like.individual(p,:,:));
+end
+like.trial = trials_like;
+
+
+for p = 1:size(dislike.individual, 1)   
+    trials_dislike{p} = squeeze(dislike.individual(p,:,:));
+end
+dislike.trial = trials_dislike;
+
+%-----------------------------------
+rws_dislike.individual = rws_dislike.individual(:,ind_cluster,:);
+rwv_like.individual = rwv_like.individual(:,ind_cluster,:);
+
+
+
+
+%--------------------------------
+cfg = [];
+cfg.latency = time;
+cfg.method           = 'montecarlo';    % use the Monte Carlo Method to calculate the significance probability
+cfg.statistic        = 'ft_statfun_indepsamplesT'; % independent t-test statt dependent t-test
+cfg.correctm         = 'cluster';
+cfg.clusterthreshold = 'nonparametric_common';
+cfg.clusteralpha     = 0.05;     % alpha level of the sample-specific test statistic that will be used for thresholding                               % will be used for thresholding
+cfg.clusterstatistic = 'maxsum';
+cfg.clustercritval = 0.05;                               % in the clustering algorithm (default=0).
+cfg.tail             = 0;
+cfg.clustertail      = 0;
+cfg.alpha            = 0.025;   % alpha level of the permutation test
+cfg.numrandomization = 500;      % number of draws from the permutation distribution
+cfg.minnbchan = 2;  % minimum number of neighborhood channels that is required for a selected sample to be included
+% cfg.parameter = 'individual'; % oder cfg.parameter = 'trial';
+% ntrials_cond = histc(sessions.labels, unique(sessions.labels));
+ntrials_cond = [size(data_like.trial,2) size(data_dislike.trial,2)];
+design  = zeros(2,min(ntrials_cond)+min(ntrials_cond));
+design(1,1:min(ntrials_cond)) = 1;
+design(1,min(ntrials_cond)+1:min(ntrials_cond)+min(ntrials_cond)) = 2;
+
+% design(2,1:ntrials_cond(1)) = [1:ntrials_cond(1)];
+% design(2,ntrials_cond(1)+1:ntrials_cond(1)+ntrials_cond(2)) = [1:ntrials_cond(2)];
+
+% design(2,:)=1:min(ntrials_cond)+min(ntrials_cond);
+cfg.design = design;
+cfg.ivar     = 1;
+% cfg.uvar     = 2;
+load ('E:\adidas\fieldtrip_Auswertung\single_subjects\nl_adi_28\MEG\sourcespace\source_avg\run1\source_avg_appended_conditions_bp1_45Hz.mat', 'source_avg')
+chanpos = source_avg.pos(source_avg.inside==1,:);
+chanpos = chanpos(ind_cluster,:);
+
+% [neighbours] = prepare_neighbours (chanpos, label, 'roi'); % Method = roi or distance
+load('E:\adidas\fieldtrip_Auswertung\group_analysis\source_space\MEG\new_data\neighbours_rois.mat')
+if 1==exist('vox_index', 'var')
+    cfg.neighbours = neighbours(vox_index);
+else
+    cfg.neighbours = neighbours;
+end
+
+data_like.individual = data_like.individual(:,ind_cluster, :);
+data_dislike.individual = data_dislike.individual(:,ind_cluster, :);
+
+rwv_like.individual = rwv_like.individual(:,ind_cluster, :);
+rws_dislike.individual = rws_dislike.individual(:,ind_cluster, :);
+
+rwv_like.time=repmat(rwv_like.time, 21)
+
+rws_dislike.time
+trials = [];
+
+for p = 1:size(rwv_like.individual, 1)   
+    trials_like{p} = squeeze(rwv_like.individual(p,:,:));
+end
+rwv_like.trial = trials_like;
+
+
+trials = [];
+
+for p = 1:size(rws_dislike.individual, 1)   
+    trials_dislike{p} = squeeze(rws_dislike.individual(p,:,:));
+end
+rws_dislike.trial = trials_dislike;
+
+
+ for i=1:1213
+      label{i}=num2str(i);
+ end
+
+ for i=1:length(rws_dislike.trial)
+     time_s{i}=rws_dislike.time;
+ end
+ 
+ cat(3, rwv_like.time, rwv_like.time)
+ repmat(rwv_like.time,2,1)
+ 
+ rwv_like.label = label';
+ rws_dislike.label = label';
+ 
+[stat]=ft_timelockstatistics(cfg, data_like, data_dislike);
+
+
+avg_like=squeeze(mean(data_like.individual,1));
+avg_dislike=squeeze(mean(data_dislike.individual,1));
+
+figure
+plot(time_s{1}, mean(avg_like)) 
+hold on
+plot(time_s{1}, mean(avg_dislike)) 
 
 end

@@ -1,28 +1,20 @@
 
-function  [virtsens_all_subj] = adi_appendvirtsensMEG(virtsens_all_subj, path2virtsens, dir_out, subject, pattern, trigger, freq, balldesign, subjnum, delete_runs)
+function  [virtsens_all_subj] = adi_appendvirtsensMEG(virtsens_all_subj, path2virtsens, dir_out, subject, pattern, trigger, freq, balldesign, delete_runs, subjnum)
 
 dir_runs = dir(path2virtsens);
 dir_runs(1:2)=[];
 
-for k = 1:length(dir_runs)
-    if 0 == delete_runs.(subject).(dir_runs(k).name).(balldesign)
-        virtsens(k)= load ([path2virtsens  dir_runs(k).name filesep 'virtsens_' freq '.mat'], 'virtsens');
+for i = 1:length(delete_runs)
+    if 1==strcmp(delete_runs{i,1}, subject)
+        dir_runs(delete_runs{i,2},:)=[];
     end
-
 end
 
-if ~exist('virtsens', 'var')
-   return
+for k = 1:length(dir_runs)
+    virtsens(k)= load ([path2virtsens  dir_runs(k).name filesep 'virtsens_' freq '.mat'], 'virtsens');
 end
 
-for k =1:length(virtsens)
-    ind(k) = isempty(virtsens(k).virtsens)
-end
-if any(ind)
-    virtsens(find(any(ind)))=[];
-end
-
-switch length(virtsens)
+switch length(dir_runs)
     case 3
         vs_allRuns.trial = [virtsens(1).virtsens.trial  virtsens(2).virtsens.trial virtsens(3).virtsens.trial];
         vs_allRuns.time = [virtsens(1).virtsens.time  virtsens(2).virtsens.time virtsens(3).virtsens.time];
@@ -66,7 +58,6 @@ vs_allRuns_ball.balldesign =  vs_allRuns.balldesign(find(ind));
 vs_allRuns_ball.subject = subject;
 
 virtsens_all_subj(subjnum)=vs_allRuns_ball;
-
 
 end
 

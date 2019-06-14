@@ -146,19 +146,20 @@
     end
     
     %% appenddata (runs per subject):
+    filter ='bp1-45Hz';
     
-    for i = 1 : length(ListSubj)  
+    for i = 3 : 4%length(ListSubj)  
         pathInterpolated = strcat (fieldtripPath, ListSubj(i).name, '\MEG_analysis\noisereduced\', filter, '\02_interpolated\');
         pathFreq = strcat(fieldtripPath, ListSubj(i).name, '\MEG_analysis\noisereduced\', filter, '\02b_bpfreq\');
         pathAppended = strcat (fieldtripPath, ListSubj(i).name, '\MEG_analysis\noisereduced\', filter, '\03_appended_data\');
-%         adi_appenddata(pathInterpolated, pathAppended, filter);
+        adi_appenddata_MEG(pathInterpolated, pathAppended, filter);
         adi_appenddata_freq(pathFreq, pathAppended, 'bp1-45Hz')
-        adi_appenddata_freq(pathFreq, pathAppended, 'delta')
-        adi_appenddata_freq(pathFreq, pathAppended, 'theta')
-        adi_appenddata_freq(pathFreq, pathAppended, 'alpha')
-        adi_appenddata_freq(pathFreq, pathAppended, 'beta')
-        adi_appenddata_freq(pathFreq, pathAppended, 'low_gamma')
-        adi_appenddata_freq(pathFreq, pathAppended, 'high_gamma')
+%         adi_appenddata_freq(pathFreq, pathAppended, 'delta')
+%         adi_appenddata_freq(pathFreq, pathAppended, 'theta')
+%         adi_appenddata_freq(pathFreq, pathAppended, 'alpha')
+%         adi_appenddata_freq(pathFreq, pathAppended, 'beta')
+%         adi_appenddata_freq(pathFreq, pathAppended, 'low_gamma')
+%         adi_appenddata_freq(pathFreq, pathAppended, 'high_gamma')
 
     end
     
@@ -169,7 +170,7 @@ ListSubj = dir(fieldtripPath);
 ListSubj(1:2) = [];
 filter     = '1_95Hz';
  
- for i = 3 : length(ListSubj)  
+ for i = 1 : length(ListSubj)  
      pathAppended = ([fieldtripPath, ListSubj(i).name, '\MEG_analysis\noisereduced\', filter, '\03_appended_data\']);    
      list_path_appended_dislike = dir(fullfile(pathAppended, 'dislike*.mat'))
      for p = 1:length(list_path_appended_dislike)

@@ -9,20 +9,18 @@ load ('U:\My Documents\MATLAB\atlas_clusterstatistic_ohne_cerebellum_thalamus_ba
 
 ind_cluster = cell2mat(atlas_cluster(:,3));
 
-for k=1:length(session.trial)
-    trials{k}=session.trial{k}(ind_cluster,:);
-end
-    
 ind_like = find(session.labels==1);
 like = [];
-like.trial=trials(ind_like);
-like.time=session.time(ind_like);
+like.trial=session.data(ind_like, ind_cluster,:);
+% like.time=session.time(ind_like);
+like.time=session.time{1,1};
 
 for k=1:length(atlas_cluster)
     label{k} = [num2str(atlas_cluster{k,3}) '_' atlas_cluster{k,2}]; 
 end
 like.label = label';
 like.dimord = 'rpt_chan_time';
+like.fsample = median(1./diff(session.time{1,1}));
 
 cfg=[];
 cfg.keeptrials = 'yes';
@@ -33,10 +31,12 @@ like_avg = ft_timelockanalysis(cfg, like);
 
 ind_dislike = find(session.labels==2);
 dislike = [];
-dislike.trial= trials(ind_dislike);
-dislike.time=session.time(ind_dislike);
+dislike.trial = session.data(ind_dislike, ind_cluster,:);
+% dislike.time=session.time(ind_dislike);
+dislike.time=session.time{1,1};
 dislike.label = label';
 dislike.dimord = 'rpt_chan_time';
+dislike.fsample = median(1./diff(session.time{1,1}));
 
 cfg=[];
 cfg.keeptrials = 'yes';
@@ -57,12 +57,12 @@ ind_trial_perm = randperm(max(ntrials_cond), min(ntrials_cond));
 switch cond_tall.label
     case 1
        cond_tall.name = 'like';
-       like.trial = like.trial(ind_trial_perm);
+       like.trial = like.trial(ind_trial_perm,:,:);
        like.time = like.time(ind_trial_perm);
     case 2
        cond_tall.name = 'dislike';
-       dislike.trial = dislike.trial(ind_trial_perm);
-       dislike.time = dislike.time(ind_trial_perm);
+       dislike.trial = dislike.trial(ind_trial_perm,:,:);
+       dislike.time = dislike.time;
 end       
 
 %%
@@ -78,11 +78,27 @@ cfg.clustercritval = 0.05;                               % in the clustering alg
 cfg.tail             = 0;
 cfg.clustertail      = 0;
 cfg.alpha            = 0.025;   % alpha level of the permutation test
-cfg.numrandomization = 100;      % number of draws from the permutation distribution
+cfg.numrandomization = 100;      % number of draws from the permutation distribution, 800 minimum
 cfg.minnbchan = 2;  % minimum number of neighborhood channels that is required for a selected sample to be included
 % cfg.parameter = 'individual'; % oder cfg.parameter = 'trial';
 % ntrials_cond = histc(sessions.labels, unique(sessions.labels));
-ntrials_cond = [length(like.trial) length(dislike.trial)];
+ntrials_cond = [size(like.trial,1) size(dislike.trial,1)];
+
+%% hier weitermachen
+design = zeros(2,2*ntrials_cond(1));
+design(1,:)=session.subject_num(1:2*ntrials_cond(1));
+
+for i = 1:subj
+design(1,i) = i;
+end
+for i = 1:subj
+design(1,subj+i) = i;
+end
+design(2,1:subj)        = 1;
+design(2,subj+1:2*subj) = 2;
+
+
+
 design  = zeros(2,min(ntrials_cond)+min(ntrials_cond));
 design(1,1:min(ntrials_cond)) = 1;
 design(1,min(ntrials_cond)+1:min(ntrials_cond)+min(ntrials_cond)) = 2;
