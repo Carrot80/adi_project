@@ -212,7 +212,7 @@ end
 %% 29.5.2019: sensordaten für einzelne Bälle zusammenfassen mit neuen Verknüpfungsregeln
 
 clear
-balldesign = 'gbv';
+balldesign = 'ggv';
 path2excelsheet = 'U:\My Documents\MATLAB\eigene_Skripte\adi_project\excelsheets\subjects.xlsx';
 path2subj = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
 subject_list = dir (path2subj);
@@ -295,7 +295,7 @@ n_subj_dislike = unique(session.subject(find(session.labels==2)));
    % dann langsam vortasten
 
 % time = [0.05 0.16];
-path2save = 'E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\rws_ball\zscore\MVPA\';
+path2save = ['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign '\zscore\MVPA\';
 time = [];   
 initial_data = split_data(session); 
 
@@ -320,6 +320,9 @@ adi_mvpa_sensorspace_lda_train_and_test(added_data.like_training, added_data.dis
 adi_mvpa_sensorspace_logreg_train_and_test(added_data.like_training, added_data.dislike_training, initial_data.like_cv, initial_data.dislike_cv, time)
 
 %% 29.5.19 compute lda, logreg crossvalidate:
+
+
+
 cfg=[];
 like = ft_appenddata(cfg, added_data.like_training, initial_data.like_cv);
 dislike =  ft_appenddata(cfg, added_data.dislike_training, initial_data.dislike_cv);
@@ -366,6 +369,37 @@ adi_stats_sensorspace(session) % hier noch vervollstänidgen
 group_path = ['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\svm\' balldesign filesep];
 SVM_Guggenmos_adapted (session, group_path, freq)
 % % SVM_Guggenmos_virtsens (session, group_path, freq)
+
+%% 17.6. crossvalidation leave one out:
+
+balldesign = 'gbf';
+load (['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign '_ball\zscore\' 'sensordata_all_subj_interp_zscore.mat'])
+
+session = sensordata_all_subj_zscore(1);
+   for k = 2:length(sensordata_all_subj_zscore)
+       session.trial = cat(2,session.trial, sensordata_all_subj_zscore(k).trial);
+       session.time = cat(2,session.time, sensordata_all_subj_zscore(k).time);
+       session.response_label = cat(2,session.response_label, sensordata_all_subj_zscore(k).response_label);
+       session.balldesign_short = cat(2,session.balldesign_short, sensordata_all_subj_zscore(k).balldesign_short);
+       session.subject = cat(2,session.subject, sensordata_all_subj_zscore(k).subject);
+   end
+   
+
+for k=1:length(session.response_label)
+    switch session.response_label{k}
+        case 'like' % 'Volley'
+            session.labels(k) = 1;
+        case 'Neu_Like' % 'Volley'
+            session.labels(k) = 1;
+        case 'dislike' % 'Space'
+            session.labels(k) = 2;
+        case 'Neu_Dislike' % 'Space'
+            session.labels(k) = 2;
+    end
+end
+clear sensordata_all_subj_zscore
+
+adi_mvpa_sensorspace_cv_leave_subj_out(session) 
 
 
 

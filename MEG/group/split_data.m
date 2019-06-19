@@ -1,12 +1,41 @@
-function [out, vargout] = adi_split_data(varargin)
+function [varargout] = adi_split_data(varargin)
 
 if size(varargin,2) > 2
     
     [like_training, dislike_training] = adi_adddata(varargin);
      out.like_training = like_training;
      out.dislike_training = dislike_training;
-elseif size(varargin,2) == 2
+elseif 1 == strcmp(varargin{2}, 'like_dislike')
     
+    session = varargin{1};
+    clear varargin
+    
+    ind_like = find(session.labels == 1);
+    like = [];
+    like.trial = session.trial(ind_like);
+    like.time = session.time(ind_like);
+    like.response_label = session.response_label(ind_like);
+    like.balldesign_short = session.balldesign_short(ind_like);
+    like.subject = session.subject(ind_like);
+    for k = 1:length(like.subject)
+       like.subject_num(k) =  str2double(like.subject{k}(end-1:end));
+    end
+    
+     %% condition dislike:
+
+    ind_dislike = find(session.labels == 2);
+    dislike = [];
+    dislike.trial = session.trial(ind_dislike);
+    dislike.time = session.time(ind_dislike);
+    dislike.response_label = session.response_label(ind_dislike);
+    dislike.balldesign_short = session.balldesign_short(ind_dislike);
+    dislike.subject = session.subject(ind_dislike);
+    for k = 1:length(dislike.subject)
+       dislike.subject_num(k) =  str2double(dislike.subject{k}(end-1:end));
+    end
+    
+    varargout{1} = like;
+    varargout{2} = dislike;
     
 else
     
