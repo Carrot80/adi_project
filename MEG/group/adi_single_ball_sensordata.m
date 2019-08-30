@@ -2,7 +2,14 @@
 function  [sensordata_ball_freq_allsubj] = append_sensordata(sensordata_ball_freq_allsubj, path2sensor_data, subject, pattern, trigger, freq, balldesign, delete_runs, subjnum)
 
 dir_runs = dir([path2sensor_data '*mat']);
-
+if isempty(delete_runs)
+    for k = 1:length(dir_runs)
+        sensor_data(k)= load ([path2sensor_data  dir_runs(k).name], 'cleanMEG_interp');
+        for p = 1:length(sensor_data(k).cleanMEG_interp.trial)
+            sensor_data(k).cleanMEG_interp.run{p} = dir_runs(k).name(end-4);
+            sensor_data(k).cleanMEG_interp.subject{p} = subject;
+        end
+    end
 % for i = 1:length(delete_runs)
 %     if 1==strcmp(delete_runs{i,1}, subject)
 %         for k = 1:size(dir_runs,1)
@@ -15,30 +22,34 @@ dir_runs = dir([path2sensor_data '*mat']);
 %             clearvars ind ind_
 %     end
 % end
-z=1;
-for k = 1:length(dir_runs)
-    if 0 == delete_runs.(subject).(['run' dir_runs(k).name(end-4)]).(balldesign)
-        sensor_data(k)= load ([path2sensor_data  dir_runs(k).name], 'cleanMEG_interp');
+else
 
-        for p = 1:length(sensor_data(k).cleanMEG_interp.trial)
-            sensor_data(k).cleanMEG_interp.run{p} = dir_runs(k).name(end-4);
-            sensor_data(k).cleanMEG_interp.subject{p} = subject;
+    z=1;
+    for k = 1:length(dir_runs)
+        if 0 == delete_runs.(subject).(['run' dir_runs(k).name(end-4)]).(balldesign)
+            sensor_data(k)= load ([path2sensor_data  dir_runs(k).name], 'cleanMEG_interp');
+
+            for p = 1:length(sensor_data(k).cleanMEG_interp.trial)
+                sensor_data(k).cleanMEG_interp.run{p} = dir_runs(k).name(end-4);
+                sensor_data(k).cleanMEG_interp.subject{p} = subject;
+            end
+        else
+            files_2_delete(z) = k;
+            z = z+1;
         end
-    else
-        files_2_delete(z) = k;
-        z = z+1;
     end
-end
 
-if ~exist('sensor_data', 'var')
-    return
-end
-
-if exist('files_2_delete', 'var')
-    while files_2_delete(end) > length(sensor_data)
-          files_2_delete(end) =[];
+    if ~exist('sensor_data', 'var')
+        return
     end
-    sensor_data(files_2_delete) = [];
+
+    if exist('files_2_delete', 'var')
+        while files_2_delete(end) > length(sensor_data)
+              files_2_delete(end) =[];
+        end
+        sensor_data(files_2_delete) = [];
+    end
+
 end
 
 sensordata_allruns = [];
@@ -81,34 +92,43 @@ end
 % unique(balldesign_trials)
 
 %% delete balldesigns which were not clearly rated:
-delete_trials = zeros(1, length(sensordata_allruns.trial));
-for p=1:length(sensordata_allruns.trial)
-%     balldesign_trial=sensordata_allruns.balldesign_short{1,p}{1,1};
-    % check if trial should be deleted:
-    if 1==delete_runs.(subject).(['run' sensordata_allruns.run{p}]).(sensordata_allruns.balldesign_short{p}{1,1})
-       delete_trials(p) = 1;
+
+if ~isempty(delete_runs)
+
+    delete_trials = zeros(1, length(sensordata_allruns.trial));
+    for p=1:length(sensordata_allruns.trial)
+    %     balldesign_trial=sensordata_allruns.balldesign_short{1,p}{1,1};
+        % check if trial should be deleted:
+        if 1==delete_runs.(subject).(['run' sensordata_allruns.run{p}]).(sensordata_allruns.balldesign_short{p}{1,1})
+           delete_trials(p) = 1;
+        end
     end
+
+    trials2keep=find(~delete_trials);
+    sensordata_allruns.trial =  sensordata_allruns.trial(trials2keep);
+    sensordata_allruns.time =  sensordata_allruns.time(trials2keep);
+    sensordata_allruns.response_label =  sensordata_allruns.response_label(trials2keep);
+    sensordata_allruns.balldesign_short =  sensordata_allruns.balldesign_short(trials2keep);
+    sensordata_allruns.run =  sensordata_allruns.run(trials2keep);
+    sensordata_allruns.subject =  sensordata_allruns.subject(trials2keep);
+    
+    
+    % for k=1:length(sensordata_allruns.trial)
+    %    temp(k)=strcmp(sensordata_allruns.balldesign_short{k}, balldesign);
+    % end
+    % ind=find(temp);
+    
 end
-
-trials2keep=find(~delete_trials);
-sensordata_allruns.trial =  sensordata_allruns.trial(trials2keep);
-sensordata_allruns.time =  sensordata_allruns.time(trials2keep);
-sensordata_allruns.response_label =  sensordata_allruns.response_label(trials2keep);
-sensordata_allruns.balldesign_short =  sensordata_allruns.balldesign_short(trials2keep);
-sensordata_allruns.run =  sensordata_allruns.run(trials2keep);
-sensordata_allruns.subject =  sensordata_allruns.subject(trials2keep);
-
-% for k=1:length(sensordata_allruns.trial)
-%    temp(k)=strcmp(sensordata_allruns.balldesign_short{k}, balldesign);
-% end
-% ind=find(temp);
-
 
 if ~isempty(ind_balldesign)
     [sensordata_allruns_ball_bpfreq] = adi_bpfilter(sensordata_allruns, freq);
 else
     clearvars ind temp sensordata_allruns
     return
+end
+
+for kk = 1:length(sensordata_allruns_ball_bpfreq.trial)
+    sensordata_allruns_ball_bpfreq.trl_no(kk) = kk; 
 end
 
 sensordata_ball_freq_allsubj(subjnum)=sensordata_allruns_ball_bpfreq;

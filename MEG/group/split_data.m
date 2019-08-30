@@ -5,6 +5,7 @@ if size(varargin,2) > 2
     [like_training, dislike_training] = adi_adddata(varargin);
      out.like_training = like_training;
      out.dislike_training = dislike_training;
+     
 elseif 1 == strcmp(varargin{2}, 'like_dislike')
     
     session = varargin{1};
@@ -17,6 +18,10 @@ elseif 1 == strcmp(varargin{2}, 'like_dislike')
     like.response_label = session.response_label(ind_like);
     like.balldesign_short = session.balldesign_short(ind_like);
     like.subject = session.subject(ind_like);
+    like.trial_info = session.trial_info(ind_like);
+    like.label = session.label;
+    like.fsample = session.fsample;
+    like.grad = session.grad;
     for k = 1:length(like.subject)
        like.subject_num(k) =  str2double(like.subject{k}(end-1:end));
     end
@@ -29,7 +34,11 @@ elseif 1 == strcmp(varargin{2}, 'like_dislike')
     dislike.time = session.time(ind_dislike);
     dislike.response_label = session.response_label(ind_dislike);
     dislike.balldesign_short = session.balldesign_short(ind_dislike);
+    dislike.trial_info = session.trial_info(ind_dislike);
     dislike.subject = session.subject(ind_dislike);
+    dislike.label = session.label;
+    dislike.fsample = session.fsample;
+    dislike.grad = session.grad;
     for k = 1:length(dislike.subject)
        dislike.subject_num(k) =  str2double(dislike.subject{k}(end-1:end));
     end

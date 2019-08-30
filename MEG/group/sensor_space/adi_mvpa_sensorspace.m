@@ -1,4 +1,4 @@
-function stats(like, dislike, time)
+function stats(like, dislike, path2save, time)
 
 if isempty(time)
     fprintf('no time input, computing classification across time...')
@@ -10,9 +10,10 @@ cfg_logreg = [] ;
 cfg_logreg.method          = 'mvpa';
 cfg_logreg.mvpa.classifier = 'logreg'; %  'logreg' oder'lda' => multi-class Linear Discriminant Analysis (LDA)
 cfg_logreg.mvpa.metric     = {'accuracy'; 'auc'};
-cfg_logreg.mvpa.param.lambda =  [0.0001 0.0006 0.0036 0.026 0.13 0.1 0.2 0.3 0.4 0.5 0.6 0.77 1 4.6416 27.82559 166.81 1000];
-cfg_logreg.mvpa.param.reg = 'l2';%
+% cfg_logreg.mvpa.param.lambda =  [0.0001 0.0006 0.0036 0.026 0.13 0.1 0.2 0.3 0.4 0.5 0.6 0.77 1 4.6416 27.82559 166.81 1000];
+% cfg_logreg.mvpa.param.reg = 'l2';%
 cfg_logreg.mvpa.param.plot = 0;
+cfg_logreg.mvpa.balance = 'undersample';
 cfg_logreg.mvpa.param.repeat = 5;
 cfg_logreg.mvpa.repeat = 5;
 cfg_logreg.mvpa.normalise = 'demean';
@@ -25,22 +26,53 @@ else
 end
 cfg_logreg.design          = [ones(1, size(like.trial,2)) 2*ones(1,size(dislike.trial,2))]';
 tic
-    stat = ft_timelockstatistics(cfg_logreg, like, dislike);
+    stat_logreg = ft_timelockstatistics(cfg_logreg, like, dislike);
 toc
 
-fprintf('Classification accuracy: %0.2f\n', stat.accuracy)
+save([path2save 'result_logreg.mat'], 'stat_logreg')
 
-figure
-plot(stat.time, stat.accuracy)
 
-mv_plot_result(stat.mvpa, like.time{1})
-
+% fprintf('Classification accuracy: %0.2f\n', stat.accuracy)
+% figures = [];
+% mv_plot_result(stat.mvpa, like.time{1})
+% figSize = [21, 29];  % [width, height]
+% figUnits = 'Centimeters';
+% 
+% FolderName = path2save;   % Your destination folder
+% FigList = findobj(allchild(0), 'flat', 'Type', 'figure');
+% for iFig = 1:length(FigList)
+%   FigHandle = FigList(iFig);
+%   FigName   = num2str(get(FigHandle, 'Number'));
+%   set(0, 'CurrentFigure', FigHandle);
+%   savefig(fullfile(FolderName, [FigName '.fig']));
+% end
+% 
+% savefig([path2save 'logreg.fig'])
 
 cfg_logreg.timextime   = 'yes';
 stat_logreg_timeXtime = ft_timelockstatistics(cfg_logreg, like, dislike);
-figure
-mv_plot_result(stat_logreg_timeXtime.mvpa)
+save([path2save 'result_logreg_timeXtime.mat'], 'stat_logreg_timeXtime')
 
+% mv_plot_result(stat_logreg_timeXtime.mvpa)
+% savefig([path2save 'result_logreg_timeXtime.mat.fig'])
+
+figure
+cfg_plot = [];
+cfg_plot.x   = stat_logreg_timeXtime.time;
+cfg_plot.y   = cfg_plot.x;
+mv_plot_2D(cfg_plot, stat_logreg_timeXtime.accuracy);
+% colormap jet
+title('Accuracy')
+savefig([path2save 'logreg_timeXtime_accuracy.fig']);
+close 
+
+
+figure
+mv_plot_2D(cfg_plot, stat_logreg_timeXtime.auc);
+% colormap jet
+title('AUC')
+savefig([path2save 'logreg_timeXtime_auc.fig']);
+close
 
 
 %% lda
@@ -51,6 +83,7 @@ cfg_LDA.mvpa.metric     = {'accuracy'; 'auc'};
 % cfg_LDA.mvpa.param.lambda =  [0.0001 0.0006 0.0036 0.026 0.13 0.1 0.2 0.3 0.4 0.5 0.6 0.77 1 4.6416 27.82559 166.81 1000];
 % cfg_LDA.mvpa.param.reg = 'shrink';%
 cfg_LDA.mvpa.param.k = 5;
+cfg_logreg.mvpa.balance = 'undersample';
 % cfg_LDA.mvpa.param.plot = 0;
 % cfg_LDA.mvpa.param.repeat = 5;
 % cfg_LDA.mvpa.repeat = 5;
@@ -70,43 +103,47 @@ tic
     stat_LDA = ft_timelockstatistics(cfg_LDA, like, dislike);
 toc
 
-save('stat_LDA', 'stat_LDA', '-v7.3')
+save([path2save 'result_lda'], 'stat_LDA', '-v7.3')
+% fprintf('Classification accuracy: %0.2f\n', stat_LDA.accuracy)
 
-fprintf('Classification accuracy: %0.2f\n', stat_LDA.accuracy)
-
-figure
-plot(stat_LDA.time, stat_LDA.accuracy)
-
-mv_plot_result(stat_LDA.mvpa, like.time{1})
-
+mv_plot_result(stat_LDA.mvpa, stat_LDA.time)
+close
 
 
 %% Plot classification accuracy across time
 close all
-mv_plot_result({stat_LDA.mvpa, stat_logreg.mvpa}, like.time{1}) % second argument is optional
+new_figure = 0;
+mv_plot_result({stat_LDA.mvpa, stat_logreg.mvpa}, stat_logreg.time, new_figure);
+figHandle = findobj('Type', 'figure');
+saveas(figHandle(1),[path2save '\comparison_logreg_lda_AUC.fig']);
+saveas(figHandle(2),[path2save '\comparison_logreg_lda_accuracy.fig']);
+
 
 %% time generalization:
 
 
 cfg_LDA.timextime   = 'yes';
 stat_LDA_timeXtime = ft_timelockstatistics(cfg_LDA, like, dislike);
-figure
-mv_plot_result(stat_LDA_timeXtime.mvpa)
+save([path2save 'result_lda_timeXtime.mat'], 'stat_LDA_timeXtime')
 
+% mv_plot_result(stat_LDA_timeXtime.mvpa)
 
 figure
-cfg_plot= [];
-cfg_plot.x   = dat.time;
+cfg_plot = [];
+cfg_plot.x   = stat_LDA_timeXtime.time;
 cfg_plot.y   = cfg_plot.x;
-mv_plot_2D(cfg_plot, acc);
-colormap jet
+mv_plot_2D(cfg_plot, stat_LDA_timeXtime.accuracy);
+% colormap jet
 title('Accuracy')
+savefig([path2save 'lda_timeXtime_accuracy.fig']);
+close 
 
 figure
-mv_plot_2D(cfg_plot, auc);
-colormap jet
+mv_plot_2D(cfg_plot, stat_LDA_timeXtime.auc);
+% colormap jet
 title('AUC')
-
+savefig([path2save 'lda_timeXtime_auc.fig']);
+close
 
 end
 

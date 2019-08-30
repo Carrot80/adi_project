@@ -20,6 +20,8 @@ boxplot(response_tbl.like_allRuns, response_tbl.balldesign)
 % wenn er mind. 14 mal dislike
 % angegeben hat, aber nur einmal like
 
+% rules: trials of balldesign were included into analysis… 
+% if a minimum of 67 % of trials were rated as attractive/unattractive, along with max. 5% unattractive/attractive ratings
 
 responses_allruns = [response_tbl.like_allRuns response_tbl.dislike_allRuns response_tbl.dontcare];
 
@@ -30,9 +32,9 @@ for k=1:length(responses_allruns)
     elseif responses_allruns(k,2) >= 14 && responses_allruns(k,1)<=1
         keep_subj_balldesign(k, 1) = 1;
         delete_sub.(response_tbl.Subject{k}).(response_tbl.balldesign{k}) = 0;
-    elseif responses_allruns(k,1) <=1
-        delete_sub.(response_tbl.Subject{k}).(response_tbl.balldesign{k}) = 0;
-        keep_subj_balldesign(k, 1) = 1;
+%     elseif responses_allruns(k,1) <=1 
+%         delete_sub.(response_tbl.Subject{k}).(response_tbl.balldesign{k}) = 0;
+%         keep_subj_balldesign(k, 1) = 1;       
     else
         keep_subj_balldesign(k, 1) = 0;  
         delete_balldesign.(response_tbl.Subject{k}).(response_tbl.balldesign{k})=1;
@@ -48,11 +50,16 @@ end
 % end
 
 responses_run1 = [response_tbl.like_run1 response_tbl.dislike_run1 response_tbl.dontcare_run1];
- 
+
+%%  Selektion auf run-ebene: wenn 
 for k=1:length(response_tbl.like_run1)
     if response_tbl.like_run1(k) >= 6 %&& responses_run1(k,2)<2
         keep_run1(k, 1) = 1;
+    elseif response_tbl.dislike_run1(k) >= 6
+        keep_run1(k, 1) = 1;     
     elseif response_tbl.dislike_run1(k) >= 2 && response_tbl.like_run1(k) <=1
+        keep_run1(k, 1) = 1;
+    elseif response_tbl.like_run1(k) >= 2 && response_tbl.dislike_run1(k) <=1
         keep_run1(k, 1) = 1;
     else
         keep_run1(k, 1) = 0;
@@ -63,9 +70,13 @@ end
 responses_run2 = [response_tbl.like_run2 response_tbl.dislike_run2 response_tbl.dontcare_run2];
  
 for k=1:length(responses_run2)
-    if response_tbl.like_run2(k) >= 6 
+    if response_tbl.like_run2(k) >= 6 %&& responses_run1(k,2)<2
         keep_run2(k, 1) = 1;
-    elseif response_tbl.dislike_run2(k) >= 2 &&  response_tbl.like_run2(k) <=1
+    elseif response_tbl.dislike_run2(k) >= 6
+        keep_run2(k, 1) = 1;     
+    elseif response_tbl.dislike_run2(k) >= 2 && response_tbl.like_run2(k) <=1
+        keep_run2(k, 1) = 1;
+    elseif response_tbl.like_run2(k) >= 2 && response_tbl.dislike_run2(k) <=1
         keep_run2(k, 1) = 1;
     else
         keep_run2(k, 1) = 0;
@@ -76,14 +87,17 @@ end
 responses_run3 = [response_tbl.like_run3 response_tbl.dislike_run3 response_tbl.dontcare_run3];
  
 for k=1:length(responses_run3)
-    if response_tbl.like_run3(k) >= 6 
+    if response_tbl.like_run3(k) >= 6 %&& responses_run1(k,2)<2
         keep_run3(k, 1) = 1;
-    elseif response_tbl.dislike_run3(k) >= 2 response_tbl.like_run3(k)<=1
+    elseif response_tbl.dislike_run3(k) >= 6
+        keep_run3(k, 1) = 1;     
+    elseif response_tbl.dislike_run3(k) >= 2 && response_tbl.like_run3(k) <=1
+        keep_run3(k, 1) = 1;
+    elseif response_tbl.like_run3(k) >= 2 && response_tbl.dislike_run3(k) <=1
         keep_run3(k, 1) = 1;
     else
         keep_run3(k, 1) = 0;
     end
-
 end
 
 for k = 1:length(keep_run1)   

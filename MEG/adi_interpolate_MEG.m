@@ -2,7 +2,7 @@ function adi_interpolate_MEG (inPath, outPath)
 
 list = dir(fullfile([inPath, '*.mat'])); 
 for k = 1:length(list)
-%     if ~exist([outPath, list(k).name], 'file');
+    if ~exist([outPath, list(k).name], 'file')
         load([inPath list(k).name]); 
         
 %         for p = 1:length(cleanMEG.trial)
@@ -78,6 +78,8 @@ for k = 1:length(list)
 
     end
 end
+end
+
 
 function [cleanMEG_interp] = interpolate_MEG(cleanMEG, cleanMEG_interp, pos, neighbours)
 

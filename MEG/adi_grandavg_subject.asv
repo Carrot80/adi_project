@@ -31,7 +31,28 @@ if 1 == isempty(delete_run)
             grandavg.like.(subjectpath(ii).name)(counter).avg = avg; 
             clear avg cleanMEG_interp data
             counter = counter + 1;
-         end     
+        end     
+        
+        % grandavg like per subject 
+        cfg = [];
+        cfg.method  = 'within';
+        switch counter
+            case 3
+                avg_like = ft_timelockgrandaverage(cfg, grandavg.like.(subjectpath(ii).name)(1).avg, grandavg.like.(subjectpath(ii).name)(2).avg, grandavg.like.(subjectpath(ii).name)(3).avg)
+            case 2
+                avg_like = ft_timelockgrandaverage(cfg, grandavg.like.(subjectpath(ii).name)(1).avg, grandavg.like.(subjectpath(ii).name)(2).avg)
+            case 1
+                avg_like = grandavg.like.(subjectpath(ii).name)(counter).avg;
+        end
+        if ~exist([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\grandavg\'], 'dir')
+            mkdir([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\grandavg\'])
+        end
+        save ([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\grandavg\grandavg_like.mat' ], 'avg_like');
+        figure
+        plot(avg_like.time, avg_like.avg)
+        title('grandavg like')
+        savefig ([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\grandavg\grandavg_like.fig' ]);
+        
         
         %% dislike:
          filename = dir([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\02_interpolated\Neu_Dislike*.mat']);
@@ -58,7 +79,24 @@ if 1 == isempty(delete_run)
             grandavg.dislike.(subjectpath(ii).name)(counter).avg = avg; 
             clear avg cleanMEG_interp data
             counter = counter + 1;
-         end     
+        end     
+         % grandavg dislike per subject 
+        cfg = [];
+        cfg.method  = 'within';
+        switch counter
+            case 3
+                avg_dislike = ft_timelockgrandaverage(cfg, grandavg.dislike.(subjectpath(ii).name)(1).avg, grandavg.dislike.(subjectpath(ii).name)(2).avg, grandavg.dislike.(subjectpath(ii).name)(3).avg);
+            case 2
+                avg_dislike = ft_timelockgrandaverage(cfg, grandavg.dislike.(subjectpath(ii).name)(1).avg, grandavg.dislike.(subjectpath(ii).name)(2).avg);
+            case 1
+                avg_dislike = grandavg.dislike.(subjectpath(ii).name)(counter).avg;
+        end
+        if ~exist([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\grandavg\'], 'dir')
+            mkdir([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\grandavg\'])
+        end
+        save ([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\grandavg\grandavg_dislike.mat' ], 'avg_dislike');
+  
+         
         
           %% dontcare:
          filename = dir([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\02_interpolated\Neu_Dontcare*.mat']);
@@ -88,6 +126,28 @@ if 1 == isempty(delete_run)
                 counter = counter + 1;
             end  
          end
+         
+           % grandavg dontca per subject 
+        cfg = [];
+        cfg.method  = 'within';
+        switch counter
+            case 3
+                avg_like = ft_timelockgrandaverage(cfg, grandavg.like.(subjectpath(ii).name)(1).avg, grandavg.like.(subjectpath(ii).name)(2).avg, grandavg.like.(subjectpath(ii).name)(3).avg)
+            case 2
+                avg_like = ft_timelockgrandaverage(cfg, grandavg.like.(subjectpath(ii).name)(1).avg, grandavg.like.(subjectpath(ii).name)(2).avg)
+            case 1
+                avg_like = grandavg.like.(subjectpath(ii).name)(counter).avg;
+        end
+        if ~exist([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\grandavg\'], 'dir')
+            mkdir([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\grandavg\'])
+        end
+        save ([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\grandavg\grandavg_like.mat' ], 'avg_like');
+        figure
+        plot(avg_like.time, avg_like.avg)
+        title('grandavg like')
+        savefig ([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\grandavg\grandavg_like.fig' ]);
+        
+        
     end
     
 else

@@ -41,7 +41,7 @@ for p = 1:length(mvpa)
     cfg_fig.xlim         = [0, 0];
     cfg_fig.colorbar     = 'yes';
     ft_topoplotER(cfg_fig, stat_comp.(mvpa{p}));
-    title(['comp ' num2str(time(1)) ' ' num2str(time(2)) ' ' ball]);
+    title(['comp ' num2str(time(1)) ' ' num2str(time(2))]);
     
     savefig([path2save 'searchlight_accuracy_' mvpa{p} '_' time_ '.fig'])
     close

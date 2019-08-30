@@ -8,7 +8,7 @@ function adi_rejectvisual_MEG_extra(path2cleanfile, path_interpolated, subject)
     files   =   dir(fullfile(path2cleanfile, '*.mat'));
     size_files = size(files);
     cfg = [];
-    cfg.method = 'trial';%'trial'% 'summary' %, 'trial'
+    cfg.method = 'summary';%'trial'% 'summary' %, 'trial'
 %     cfg.method = 'channel';
     cfg.channel = 'MEG'; % MEG
     cfg.keepchannel = 'nan';
@@ -23,7 +23,7 @@ function adi_rejectvisual_MEG_extra(path2cleanfile, path_interpolated, subject)
     for i = 1:(size_files(1,1))
         
         load ([files(i).folder, filesep, files(i).name], 'cleanMEG')
-        load([path_interpolated files(i).name], 'RetVal')
+        load([path_interpolated files(i).name], 'cleanMEG_interp')
         cfgn                = [];
         cfgn.parameter      = 'trial';
         cfgn.keeptrials     = 'yes'; % classifiers operate on individual trials
@@ -32,9 +32,9 @@ function adi_rejectvisual_MEG_extra(path2cleanfile, path_interpolated, subject)
         
         %% plot and save avg before cleaning:
              
-        tcleanMEG         = ft_timelockanalysis(cfgn,cleanMEG);  
+        tcleanMEG2         = ft_timelockanalysis(cfgn,cleanMEG2);  
         figure
-        plot(tcleanMEG.time, tcleanMEG.avg(1:248,:)) % MEG
+        plot(tcleanMEG2.time, squeeze(mean(tcleanMEG2.trial(:,1:248,:),1))) % MEG
         axis tight
         file            = files(i).name;
         
@@ -45,7 +45,7 @@ function adi_rejectvisual_MEG_extra(path2cleanfile, path_interpolated, subject)
         trialinfo = cleanMEG.trialinfo;
         
         if ~isequal(length(cleanMEG.trial), 1)
-            [cleanMEG]       = ft_rejectvisual(cfg, cleanMEG); 
+            [cleanMEG2]       = ft_rejectvisual(cfg, cleanMEG); 
             cleanMEG.trialinfo = trialinfo;
             for p = 1:length(cleanMEG.trial)
                 ind = find(isnan(cleanMEG.trial{p}(:,1)));
@@ -53,17 +53,15 @@ function adi_rejectvisual_MEG_extra(path2cleanfile, path_interpolated, subject)
                 RetVal.ChannelFlag_Bst{p}(ind) =-1;
             end
             if ~isempty(cleanMEG.cfg.artfctdef.trial.artifact)
-                for p=1:length(cleanMEG.cfg.artfctdef.trial.artifact)
-                   ind(p) = find(cleanMEG.cfg.artfctdef.trial.artifact(p,1) == cleanMEG.sampleinfo(:,1));
+                for p=1:length(cleanMEG.cfg.artfctdef.summary)
+                   ind(p) = find(cleanMEG.cfg.artfctdef.summary(p,1) == cleanMEG.sampleinfo(:,1));
                 end
                 cleanMEG.trial(find(ind))=[];
                 cleanMEG.time(find(ind))=[];
                 cleanMEG.sampleinfo(find(ind),:)=[];
                 cleanMEG.ChannelFlag_Bst(find(ind),:)=[];
                 cleanMEG.triggerchannel
-                cleanMEG.
-                cleanMEG
-                cleanMEG
+          
                 cleanMEGcleanMEG
             end
         elseif isequal(length(cleanMEG.trial), 1)

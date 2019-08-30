@@ -1,30 +1,69 @@
-%% 4.12.2018
-% neue Daten
+%% ab 28.6.2019 => noch mal von vorne angefangen, um Jeff's Methode zur Artefaktbereinigung zu verwenden
 
 
-%% main settings:
+
+%% remove unwanted brainstorm files (bandpass, zscore)
+
 clear
-% brainstormPath     = 'E:\adidas\Daten_Franzi\Database12-2018\BS_TrainingGroup\brainstorm_db\';
 brainstormPath  = 'W:\neurochirurgie\science\Franzi\Database\BS_TrainingGroup\brainstorm_db\';
 fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
 ListSubj = dir(fieldtripPath);
 ListSubj(1:2) = [];
-filter     = '1_95Hz';
+filter     = '1_95Hz';  
+ for i = 1:length(ListSubj)    
+    adi_remove_brainstorm_files (brainstormPath, ListSubj(i).name)
+ end
+
+
     
  %% Export Brainstorm-Files to Fieldtrip:   
-    
- for i = 1%:length(ListSubj)    
+
+clear
+brainstormPath  = 'W:\neurochirurgie\science\Franzi\Database\BS_TrainingGroup\brainstorm_db\';
+fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+ListSubj = dir(fieldtripPath);
+ListSubj(1:2) = [];
+filter     = '1_95Hz';  
+ for i = length(ListSubj)    
      path_export_bst2ft   = ([fieldtripPath ListSubj(i).name '\MEG_EEG_input\noisereduced\' filter '\02_Export_Bst2Ft\']);
      if ~exist(path_export_bst2ft, 'dir')
          mkdir(path_export_bst2ft)
      end  
     adi_select_files_newData (brainstormPath, ListSubj(i).name, path_export_bst2ft)
  end
+ 
+ %% adi_04 =>> channels umsortieren
+clear
+inpath = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\nl_adi_04\MEG_analysis\noisereduced\1_95Hz\01_clean\alte_Kanalsortierung\';
+path_new_labels = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\nl_adi_05\MEG_analysis\noisereduced\1_95Hz\01_clean\Neu_Like500_1.mat';
+outpath = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\nl_adi_04\MEG_analysis\noisereduced\1_95Hz\01_clean\';
+
+kh_sort_channels(inpath, path_new_labels, outpath)
+
+%% entferne bad channels und ICA 
+% 28.6.19 ICA nach Jeff's Empfehlung => nicht fertig
+clear
+fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+ListSubj = dir(fieldtripPath);
+ListSubj(1:2) = [];
+filter     = '1_95Hz';
+
+for i = 29 %6:length(ListSubj)  
+    path2data = ([fieldtripPath, ListSubj(i).name, '\MEG_EEG_input\noisereduced\' filter '\02_Export_Bst2Ft\']);
+    path_ICA = ([fieldtripPath ListSubj(i).name '\MEG_analysis\noisereduced\' filter '\01_ica\']);
+    if ~exist(path_ICA, 'dir')
+        mkdir(path_ICA)
+    end
+        
+    adi_remove_comp_ica (path2data, path_ICA)
+end 
+ 
+ 
 
 %% füge trigger und balldesign hinzu und entferne bad channels:
 
 clear
-fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+fieldtripPath = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
 ListSubj = dir(fieldtripPath);
 ListSubj(1:2) = [];
 filter  = '1_95Hz';
@@ -34,11 +73,13 @@ trigger.balldesign = {'yellow_blue_volley', 'red_white_space', 'red_white_soccer
 trigger.triggercodes = [102, 104, 106, 108, 4196, 4198, 4200, 4202, 4204];
 trigger.eprime        = [102, 104, 106, 108, 101, 103, 105, 107, 109];
 
-for i = 27:length(ListSubj)  
-    path2cleanfile = ([fieldtripPath, ListSubj(i).name, '\MEG_analysis\noisereduced\', filter, '\01_clean\']);
-    path2retval = ([fieldtripPath, ListSubj(i).name, '\MEG_EEG_input\noisereduced\' filter '\02_Export_Bst2Ft\']);
-    adi_artifact_cleaning_newData(path2retval, path2cleanfile, ListSubj(i).name, filter, trigger)    
+for ii = 4:length(ListSubj)  
+    path2cleanfile = ([fieldtripPath, ListSubj(ii).name, '\MEG_analysis\noisereduced\', filter, '\01_clean\']);
+    bst_path = ['W:\neurochirurgie\science\Franzi\Database\BS_TrainingGroup\brainstorm_db\'];
+    path2retval = ([fieldtripPath, ListSubj(ii).name, '\MEG_EEG_input\noisereduced\' filter '\02_Export_Bst2Ft\']);
+    adi_artifact_cleaning_newData(path2retval, bst_path, path2cleanfile, ListSubj(ii).name, filter, trigger)    
 end
+
 
 %% rejectvisual zusätzliche Säuberung einzelner Runs: für neue Daten nicht genutzt
 % nl_adi_19, nl_adi21        
@@ -47,7 +88,7 @@ fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswert
 ListSubj = dir(fieldtripPath);
 ListSubj(1:2) = [];
 
-    for i = 18% : length(ListSubj)  
+    for i = 29% : length(ListSubj)  
         
         path2cleanfile = ([fieldtripPath, ListSubj(i).name, '\MEG_analysis\noisereduced\1_95Hz\01_clean\']);
         path_interpolated = ([fieldtripPath, ListSubj(i).name, '\MEG_analysis\noisereduced\1_95Hz\02_interpolated\']);
@@ -111,34 +152,18 @@ figure
 plot(tcleanMEG.time, tcleanMEG.avg(1:248,:)) % MEG
 
 % 
-%% 28.6.19 ICA nach Jeff's Empfehlung => funktioniert noch nicht
+
+
+ 
+
+%% interpolate missing channels:
 clear
 fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
 ListSubj = dir(fieldtripPath);
 ListSubj(1:2) = [];
 filter     = '1_95Hz';
 
-for i = 1:length(ListSubj)  
-    path2cleanfile = ([fieldtripPath ListSubj(i).name '\MEG_analysis\noisereduced\' filter '\01_clean\']);
-    path_ICA = ([fieldtripPath ListSubj(i).name '\MEG_analysis\noisereduced\' filter '\02_ica\']);
-    if ~exist(path_ICA, 'dir')
-        mkdir(path_ICA)
-    end
-        
-    adi_remove_comp_ica (path2cleanfile, path_ICA)
-end
-
- 
-
-%% interpolate missing channels:
-clear
-brainstormPath     = 'W:\neurochirurgie\science\Kirsten\adidas\brainstorm_db\';
-fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
-ListSubj = dir(fieldtripPath);
-ListSubj(1:2) = [];
-filter     = '0.5_95Hz';
-
-for i = 26%:length(ListSubj)  
+for i = 1%:length(ListSubj)  
     path2cleanfile = ([fieldtripPath ListSubj(i).name '\MEG_analysis\noisereduced\' filter '\01_clean\']);
     pathInterpolated = ([fieldtripPath ListSubj(i).name '\MEG_analysis\noisereduced\' filter '\02_interpolated\']);
 
@@ -223,7 +248,62 @@ for i = 26%:length(ListSubj)
    
 end
 
-%%
+%% 30.7.2019: sensordaten für einzelne Bälle zusammenfassen ohne Verknüpfungsregeln
+
+clear
+balldesign = {'gbv', 'rws', 'rwf', 'ggv', 'gbs', 'gbf', 'rwv', 'ggs', 'ggf'}; 
+path2subj = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+subject_list = dir (path2subj);
+subject_list([1 2],:) = [];
+freq = 'bp1_45Hz';
+
+
+for jj = 1:length(balldesign)
+    sensordata_all_subj = struct('trial', [], 'time', [], 'response_label', [], 'balldesign_short', [], 'run', [], 'subject', [],'label', [], 'fsample', [] ,'grad', [], 'cfg', [], 'trl_no', []);
+
+    for ii=1:length(subject_list)
+        path2sensordata = ['W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\' subject_list(ii).name '\MEG_analysis\noisereduced\1_95Hz\02_interpolated\' ];
+        [sensordata_all_subj] = adi_single_ball_sensordata(sensordata_all_subj, path2sensordata, subject_list(ii).name, [], [], freq, balldesign{jj}, [], ii);
+    end
+
+    [sensordata_all_subj_int] = adi_additionalMEG_interpolation(sensordata_all_subj, []);
+
+    % z-transformation:
+    [sensordata_all_subj_zscore] = adi_ztrans_sensorspace(sensordata_all_subj_int);
+    clear sensordata_all_subj_int
+
+    session = sensordata_all_subj_zscore(1);
+       for k = 2:length(sensordata_all_subj_zscore)
+           session.trial = cat(2,session.trial, sensordata_all_subj_zscore(k).trial);
+           session.time = cat(2,session.time, sensordata_all_subj_zscore(k).time);
+           session.response_label = cat(2,session.response_label, sensordata_all_subj_zscore(k).response_label);
+           session.balldesign_short = cat(2,session.balldesign_short, sensordata_all_subj_zscore(k).balldesign_short);
+           session.subject = cat(2,session.subject, sensordata_all_subj_zscore(k).subject);
+           session.run = cat(2,session.run, sensordata_all_subj_zscore(k).run);
+           session.trl_no = cat(2,session.trl_no, sensordata_all_subj_zscore(k).trl_no);
+       end
+
+
+    for k=1:length(session.response_label)
+        switch session.response_label{k}
+            case 'like' % 'Volley'
+                session.labels(k) = 1;
+            case 'Neu_Like' % 'Volley'
+                session.labels(k) = 1;
+            case 'dislike' % 'Space'
+                session.labels(k) = 2;
+            case 'Neu_Dislike' % 'Space'
+                session.labels(k) = 2;
+            case 'dontcare'
+                session.labels(k) = 3;
+        end
+    end
+
+    save(['\\141.67.74.59\data\Adidas\sensordata_all_available_trials\' 'session_' balldesign{jj} 'all_trls.mat'], 'session')
+    clear sensordata_all_subj sensordata_all_subj_zscore session
+
+    
+end
 
 %% 29.5.2019: sensordaten für einzelne Bälle zusammenfassen mit neuen Verknüpfungsregeln
 
@@ -337,7 +417,7 @@ adi_mvpa_sensorspace_logreg_train_and_test(added_data.like_training, added_data.
 
 %% 29.5.19 compute lda, logreg crossvalidate:
 
-cfg=[];
+cfg = [];
 like = ft_appenddata(cfg, added_data.like_training, initial_data.like_cv);
 dislike =  ft_appenddata(cfg, added_data.dislike_training, initial_data.dislike_cv);
 
@@ -357,7 +437,7 @@ clear
 balldesign = {'gbf'; 'gbv'; 'ggf'; 'rwv'; 'rws'; 'rwf'; 'gbs'; 'ggs'; 'ggv'};
 
 
-for pp = 9:length(balldesign)
+for pp = 2%:length(balldesign)
     load (['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\sensordata_all_subj_zscore.mat'])
     path2save = (['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\MVPA\5foldCV\']);
     if ~exist(path2save, 'dir')
@@ -391,19 +471,38 @@ for pp = 9:length(balldesign)
     adi_mvpa_sensorspace(like, dislike, path2save, [])
     
 end
+%% 2.7.19 fehler entdeckt: adi_04 hat andere labelsortierung ==> angleichen an andere:
+clear
+balldesign = {'gbv'; 'rwv'; 'rws'; 'rwf'; 'gbs'};
 
-%% searchlight: 24.6.19
+for pp = 4%:length(balldesign)
+    load (['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\sensordata_all_subj_zscore.mat'])
+    chan_indx = zeros(length(sensordata_all_subj_zscore(1).label),1);
+    if 1 == strcmp(sensordata_all_subj_zscore(1).subject{1}, 'nl_adi_04')
+        for kk = 1:length(sensordata_all_subj_zscore(1).label)
+            chan_indx(kk) = find(strcmp(sensordata_all_subj_zscore(2).label{kk}, sensordata_all_subj_zscore(1).label));
+        end
+        for kk = 1:length(sensordata_all_subj_zscore(1).trial)
+             trials{kk} = sensordata_all_subj_zscore(1).trial{kk}(chan_indx,:);
+        end
+        sensordata_all_subj_zscore(1).trial = trials;
+        sensordata_all_subj_zscore(1).label = sensordata_all_subj_zscore(2).label;
+    end
+end
+
+
+%% searchlight: 2.7.19
 clear
 balldesign = {'gbf'; 'gbv'; 'ggf'; 'rwv'; 'rws'; 'rwf'; 'gbs'; 'ggs'; 'ggv'};
 
 
-for pp = 1:length(balldesign)
+for pp = 7%:length(balldesign)
 
     load (['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\sensordata_all_subj_zscore.mat'])
     if ~exist(['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\MVPA\searchlight'], 'dir')
         mkdir(['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\MVPA\searchlight'])
     end
-    path2save = (['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\MVPA\searchlight\undersampled_data\neighboursize_7\']);
+    path2save = (['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\MVPA\searchlight\undersampled_data\']);
     if ~exist(path2save, 'dir')
         mkdir(path2save)
     end
@@ -435,13 +534,15 @@ for pp = 1:length(balldesign)
     
     clear session
     
-    comp1 = [0.05 0.15];
-    adi_mvpa_searchlight_sensorspace(like, dislike, comp1, path2save, balldesign{pp}) 
-    comp2 = [0.15 0.5];
-    adi_mvpa_searchlight_sensorspace(like, dislike, comp2, path2save, balldesign{pp}) 
-    comp3 = [0.5 0.8];
-    adi_mvpa_searchlight_sensorspace(like, dislike, comp3, path2save, balldesign{pp})  
-    comp = [-0.5 -0.2];
+%     comp1 = [0.05 0.15];
+%     adi_mvpa_searchlight_sensorspace(like, dislike, comp1, path2save, balldesign{pp}) 
+%     comp2 = [0.15 0.5];
+%     adi_mvpa_searchlight_sensorspace(like, dislike, comp2, path2save, balldesign{pp}) 
+%     comp3 = [0.5 0.8];
+%     adi_mvpa_searchlight_sensorspace(like, dislike, comp3, path2save, balldesign{pp}) 
+%     comp = [-0.5 -0.2];
+%     adi_mvpa_searchlight_sensorspace(like, dislike, comp, path2save, balldesign{pp})    
+    comp = [-0.5 0];
     adi_mvpa_searchlight_sensorspace(like, dislike, comp, path2save, balldesign{pp})     
     
 end
@@ -529,43 +630,27 @@ for pp = 1:length(balldesign)
     
 end
 
-
-%% 17.6. crossvalidation leave two subjects out:
+%% 4.7. crossvalidation out leave two subjects with feature reduction:
 clear
-balldesign = {'ggf'; 'rwv'; 'rws'; 'rwf'; 'gbs'; 'gbv'; 'ggs'; 'ggv'};
+balldesign = {'gbf'; 'gbv'; 'ggf'; 'rwv'; 'rws'; 'rwf'; 'ggs'; 'ggv'; 'gbs'}; % gbs rausgenommen, da nur 34 trials in Bedingung like
 
-for pp = 5:length(balldesign)
-
-    load (['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\sensordata_all_subj_zscore.mat'])
-    path2save = (['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\MVPA\holdout_subj\']);
-
-    session = sensordata_all_subj_zscore(1);
-       for k = 2:length(sensordata_all_subj_zscore)
-           session.trial = cat(2,session.trial, sensordata_all_subj_zscore(k).trial);
-           session.time = cat(2,session.time, sensordata_all_subj_zscore(k).time);
-           session.response_label = cat(2,session.response_label, sensordata_all_subj_zscore(k).response_label);
-           session.balldesign_short = cat(2,session.balldesign_short, sensordata_all_subj_zscore(k).balldesign_short);
-           session.subject = cat(2,session.subject, sensordata_all_subj_zscore(k).subject);
-       end
-
-
-    for k=1:length(session.response_label)
-        switch session.response_label{k}
-            case 'like' % 'Volley'
-                session.labels(k) = 1;
-            case 'Neu_Like' % 'Volley'
-                session.labels(k) = 1;
-            case 'dislike' % 'Space'
-                session.labels(k) = 2;
-            case 'Neu_Dislike' % 'Space'
-                session.labels(k) = 2;
-        end
-    end
-    clear sensordata_all_subj_zscore
-
-    adi_mvpa_sensorspace_cv_leave_subj_out(session, path2save) 
-
+for pp = 2:length(balldesign)
+    fn_input = 'sensordata_all_subj_zscore.mat';
+    input_path = (['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\']);
+    fn2save = 'result_feature_red.mat';
+    path2save = (['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\MVPA\holdout_subj\feature_reduction\']);
+    config = [];
+    config.balance = 'undersample';
+    adi_mvpa_sensorspace_cv_leave_subj_out(balldesign{pp}, fn_input, input_path, fn2save, path2save, config) 
+    
 end
+    
+   
+
+%% 
+
+
+
 
 %% compute lcmv Beamformer and virtual sensors for each subject- 
 % anderes Zeitintervall für Covariance!!
@@ -846,7 +931,7 @@ trigger.triggerchannel  = [102, 104, 106, 108, 4196, 4198, 4200, 4202, 4204];
 trigger.eprime          = [102, 104, 106, 108, 101, 103, 105, 107, 109];
 
 balldesign = 'ggs';
-delete_subjects = {'nl_adi_20'; 'nl_adi_29'; 'nl_adi_34'};
+delete_subjects = {'nl_adi_20'; 'nl_adi_29'; 'nl_adi_34'}; 
 for i=1:length(subject_list)
     ind(i) = sum(strcmp (subject_list(i).name, delete_subjects));
 end
