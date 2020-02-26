@@ -8,6 +8,10 @@ cfg.method      = 'triangulation';
 cfg.layout      = '4D248.lay';    
 cfg.channel     = dislike.label;
 neighbours = ft_prepare_neighbours(cfg);
+
+
+
+%%
 rng default
 time_ = [num2str(time(1)) '_' num2str(time(2)) 's'];
 mvpa = {'lda'; 'logreg'}; 

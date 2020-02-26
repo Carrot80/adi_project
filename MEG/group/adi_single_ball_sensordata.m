@@ -179,6 +179,8 @@ if 1 == strcmp(bpname, 'delta') %|| 1 == strcmp(bpname, 'bp1-45Hz')
 else
     cfg.bpfilter      = 'yes'; 
     cfg.bpfreq        = bpfreq;
+    cfg.demean = 'yes';
+    cfg.baselinewindow  = [-0.5 -0.030];
 end
 
 try
@@ -194,7 +196,7 @@ end
 
 cfg =[];
 cfg.resamplefs = 256;
-cfg.detrend = 'no';
+% cfg.detrend = 'no';
 [data_bpfreq_res] = ft_resampledata(cfg, data_bpfreq);
 
 cfg =[];

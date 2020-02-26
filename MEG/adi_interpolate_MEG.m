@@ -5,10 +5,6 @@ for k = 1:length(list)
     if ~exist([outPath, list(k).name], 'file')
         load([inPath list(k).name]); 
         
-%         for p = 1:length(cleanMEG.trial)
-%             cleanMEG.trial{p}(249:end,:)=[];
-%         end
-%         cleanMEG.label(249:end)=[];
         [neighbours] = MEG_neighbours (cleanMEG); 
         close all
         cfgn                = [];
@@ -17,10 +13,18 @@ for k = 1:length(list)
         % cfgn.layout        = '4D248.lay'; % weglassen, da grad sonst aus layout-file aufgebaut wird
         cfgn.neighbours     = neighbours;   % bourhood structure, see also FT_PREPARE_NEIGHBOURS
         cfgn.senstype     = 'MEG';
-
+        [cleanMEG_interp] = ft_channelrepair(cfgn, cleanMEG);
+        
+        if sum(cleanMEG_interp.trial{1,1}(225,:)) == 0
+            cfgn.badchannel = {'A248'};
+            [cleanMEG_interp] = ft_channelrepair(cfgn, cleanMEG_interp);
+        end
+        
+        
+        
         % für jedes Trial einzeln Sensoren mit 'NaN' finden:
-        for m = 1:length(cleanMEG.trial)
-            [pos(:,m)]       = isnan (cleanMEG.trial{1,m}(1:248,1));
+        for m = 1:length(cleanMEG_interp.trial)
+            [pos(:,m)]       = isnan (cleanMEG_interp.trial{1,m}(1:248,1));
         end
 
         [badChans_allTrials] = find(sum(transpose(pos))== length(cleanMEG.trial)); 
@@ -28,16 +32,14 @@ for k = 1:length(list)
         if ~isempty(badChans_allTrials)
             cfgn.trials         = 'all';        % or a selection given as a 1xN vector (default = 'all')
             cfgn.badchannel    = cleanMEG.label(badChans_allTrials'); % wichtig: semicolon, sonst funktioniert es nicht!
-            [cleanMEG_interp] = ft_channelrepair(cfgn, cleanMEG);
-        else
-            cleanMEG_interp = cleanMEG;
+            [cleanMEG_interp] = ft_channelrepair(cfgn, cleanMEG_interp);
         end
         clear pos
         for m = 1:length(cleanMEG_interp.trial)
             [pos(:,m)]       = isnan (cleanMEG_interp.trial{1,m}(1:248,1));
         end
 
-        [badChans_singleTrials] = find(sum(transpose(pos)) < length(cleanMEG.trial) & sum(transpose(pos)) > 0);
+        [badChans_singleTrials] = find(sum(transpose(pos)) < length(cleanMEG_interp.trial) & sum(transpose(pos)) > 0);
         if ~isempty(badChans_singleTrials)  
             for m=1:length(badChans_singleTrials)
                 indTrl = find(pos(badChans_singleTrials(m),:));
@@ -70,6 +72,8 @@ for k = 1:length(list)
             error('cleanMEG_interp still contains NaNs, check data')
         end
         cleanMEG_interp.trialinfo = cleanMEG.trialinfo;    
+       
+        %% save outfile:
         if ~exist(outPath, 'dir')
             mkdir(outPath)
         end

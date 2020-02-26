@@ -1,4 +1,4 @@
-%% 50ms trigger, ab 21.2.2019
+%% 50ms trigger, ab 2.9.2019
 % neue Daten
 
 
@@ -11,8 +11,15 @@ ListSubj(1:2) = [];
 filter     = '1_95Hz';
     
  %% Export Brainstorm-Files to Fieldtrip:   
-    
- for i = 28:length(ListSubj)    
+
+clear
+brainstormPath  = 'W:\neurochirurgie\science\Franzi\Database\BS_TrainingGroup\brainstorm_db\';
+fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+ListSubj = dir(fieldtripPath);
+ListSubj(1:2) = [];
+filter     = '1_95Hz';
+   
+ for i = 29:length(ListSubj)    
      path_export_bst2ft   = ([fieldtripPath ListSubj(i).name '\MEG_EEG_input\noisereduced\' filter '\02_Export_Bst2Ft\']);
      if ~exist(path_export_bst2ft, 'dir')
          mkdir(path_export_bst2ft)
@@ -24,115 +31,80 @@ filter     = '1_95Hz';
  
 %% füge trigger und balldesign hinzu und entferne bad channels:
 
-
 clear
 fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+brainstormPath  = 'W:\neurochirurgie\science\Franzi\Database\BS_TrainingGroup\brainstorm_db\';
+
 ListSubj = dir(fieldtripPath);
 ListSubj(1:2) = [];
 filter  = '1_95Hz';
 
 trigger.balldesign_short = {'gbv', 'rws', 'rwf', 'ggv', 'gbs', 'gbf', 'rwv', 'ggs', 'ggf'}; 
 trigger.balldesign = {'yellow_blue_volley', 'red_white_space', 'red_white_soccerball', 'grey_green_volley', 'yellow_blue_space', 'yellow_blue_soccerball', 'red_white_volley', 'grey_green_space', 'grey_green_soccerball'}; 
-trigger.triggercodes = [102, 104, 106, 108, 4196, 4198, 4200, 4202, 4204];
-trigger.eprime        = [102, 104, 106, 108, 101, 103, 105, 107, 109];
+trigger.triggercodes = [4206, 4208, 4210, 4212, 110, 112, 114, 116, 118];
+trigger.eprime        = [111, 113, 115, 117, 110, 112, 114, 116, 118];
 
-for i = 28:length(ListSubj)  
-    path2cleanfile = ([fieldtripPath, ListSubj(i).name, '\MEG_analysis\noisereduced\', filter, '\01_clean\50ms\']);
-    path2ft_data = ([fieldtripPath, ListSubj(i).name, '\MEG_EEG_input\noisereduced\' filter '\02_Export_Bst2Ft\']);
-    brainstormPath  = ['W:\neurochirurgie\science\Franzi\Database\BS_TrainingGroup\brainstorm_db\' ListSubj(i).name filesep];
-    adi_artifact_cleaning_newData(path2ft_data, brainstormPath, path2cleanfile, ListSubj(i).name, filter, trigger)    
+for ii = 1:length(ListSubj)  
+    path2cleanfile = ([fieldtripPath, ListSubj(ii).name, '\MEG_analysis\noisereduced\', filter, '\01_clean_50ms\']);
+    path2ft_data = ([fieldtripPath, ListSubj(ii).name, '\MEG_EEG_input\noisereduced\' filter '\02_Export_Bst2Ft\']);
+    brainstormPath  = ['W:\neurochirurgie\science\Franzi\Database\BS_TrainingGroup\brainstorm_db\' ListSubj(ii).name filesep];
+    adi_artifact_cleaning_newData_50ms(path2ft_data, brainstormPath, path2cleanfile, ListSubj(ii).name, filter, trigger)    
 end
 
-%% rejectvisual zusätzliche Säuberung einzelner Runs: für neue Daten nicht genutzt
-% nl_adi_19, nl_adi21        
+ %% adi_04 =>> channels umsortieren
+clear
+inpath = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\nl_adi_04\MEG_analysis\noisereduced\1_95Hz\01_clean_50ms\alte_Kanalsortierung\';
+path_new_labels = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\nl_adi_05\MEG_analysis\noisereduced\1_95Hz\01_clean\Neu_Like500_1.mat';
+outpath = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\nl_adi_04\MEG_analysis\noisereduced\1_95Hz\01_clean_50ms\';
+
+kh_sort_channels(inpath, path_new_labels, outpath)
+
+
+%% rejectvisual zusätzliche Säuberung einzelner Runs
+% nl_adi_19, nl_adi21, nl_adi20        
 clear
 fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
 ListSubj = dir(fieldtripPath);
 ListSubj(1:2) = [];
 
-    for i = 18% : length(ListSubj)  
+    for ii = 17%16%18
         
-        path2cleanfile = ([fieldtripPath, ListSubj(i).name, '\MEG_analysis\noisereduced\1_95Hz\01_clean\']);
-        path_interpolated = ([fieldtripPath, ListSubj(i).name, '\MEG_analysis\noisereduced\1_95Hz\02_interpolated\']);
-        adi_rejectvisual_MEG_extra (path2cleanfile, path_interpolated, ListSubj(i).name)
+        path2cleanfile = ([fieldtripPath, ListSubj(ii).name, '\MEG_analysis\noisereduced\1_95Hz\01_clean_50ms\']);
+        adi_rejectvisual_MEG_extra_50ms (path2cleanfile, ListSubj(ii).name)
     end
        
-%% für neue Daten nicht genutzt:
-% nl_adi_33 => A248 rauswerfen
-% nl_adi_19 => dontcare500_1: ab 1.28 sekunden Artefakt => Zeitintervall begrenzen:
-
-clear
-fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
-ListSubj = dir(fieldtripPath);
-file = ([fieldtripPath, ListSubj(16).name, '\MEG_analysis\noisereduced\1_95Hz\01_clean\dontcare500_1.mat']);
-load (file)  
-cfgn                = [];
-cfgn.parameter      = 'trial';
-cfgn.keeptrials     = 'yes'; % classifiers operate on individual trials
-cfgn.vartrllength   = 2;
-tcleanMEG         = ft_timelockanalysis(cfgn,cleanMEG);  
-figure
-plot(tcleanMEG.time, tcleanMEG.avg(1:248,:)) % MEG
-for k = 1:length(cleanMEG.trial)
-cleanMEG.trial{k}(:,2310:end) = [];
-cleanMEG.time{k}(:,2310:end) = [];    
-end
-
-tcleanMEG = ft_timelockanalysis(cfgn,cleanMEG);  
-figure
-plot(tcleanMEG.time, tcleanMEG.avg(1:248,:)) % MEG
-    
-% nl_adi_21:
-clear
-fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
-ListSubj = dir(fieldtripPath);
-file = ([fieldtripPath, 'nl_adi_21\MEG_analysis\noisereduced\1_95Hz\01_clean\dislike500_1.mat']);
-load (file)  
-cfgn                = [];
-cfgn.parameter      = 'trial';
-cfgn.keeptrials     = 'yes'; % classifiers operate on individual trials
-cfgn.vartrllength   = 2;
-tcleanMEG         = ft_timelockanalysis(cfgn,cleanMEG);  
-figure
-plot(tcleanMEG.time, tcleanMEG.avg(1:248,:)) % MEG
-cfg = [];
-cfg.method = 'summary';%'trial'% 'summary' %, 'trial'
-cfg.channel = 'MEG'; % MEG
-cfg.keepchannel = 'nan';
-cfg.latency = [-0.5 0];
-cfg.megscale = 1;
-cfg.eegscale = 5e-8;
-cfg.interactive = 'yes';
-cfg.alim     = 1e-12; 
-[cleanMEG]       = ft_rejectvisual(cfg, cleanMEG); 
-tcleanMEG         = ft_timelockanalysis(cfgn,cleanMEG);  
-figure
-plot(tcleanMEG.time, tcleanMEG.avg(1:248,:)) % MEG
-[cleanMEG]       = ft_rejectvisual(cfg, cleanMEG); 
- tcleanMEG         = ft_timelockanalysis(cfgn,cleanMEG);  
-figure
-plot(tcleanMEG.time, tcleanMEG.avg(1:248,:)) % MEG
-
-% 
- 
 %% interpolate missing channels:
 clear
 brainstormPath     = 'W:\neurochirurgie\science\Kirsten\adidas\brainstorm_db\';
 fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
 ListSubj = dir(fieldtripPath);
 ListSubj(1:2) = [];
-filter     = '0.5_95Hz';
+filter     = '1_95Hz';
 
-for i = 26%:length(ListSubj)  
-    path2cleanfile = ([fieldtripPath ListSubj(i).name '\MEG_analysis\noisereduced\' filter '\01_clean\']);
-    pathInterpolated = ([fieldtripPath ListSubj(i).name '\MEG_analysis\noisereduced\' filter '\02_interpolated\']);
+for ii = 1:length(ListSubj)  
+    path2cleanfile = ([fieldtripPath ListSubj(ii).name '\MEG_analysis\noisereduced\' filter '\01_clean_50ms\']);
+    pathInterpolated = ([fieldtripPath ListSubj(ii).name '\MEG_analysis\noisereduced\' filter '\02_interpolated_50ms\']);
 
     adi_interpolate_MEG (path2cleanfile, pathInterpolated)
 end
 
+%% grand avg per subject:
+path2subj = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+path2save = 'MEG_analysis\noisereduced\1_95Hz\grandavg_50ms\';
+path2inputfile = 'MEG_analysis\noisereduced\1_95Hz\02_interpolated_50ms\';
+subject_list = dir (path2subj);
+subject_list([1 2],:) = [];
+grandavg = []; 
+[grandavg, trl_count] = adi_grandavg_subject(subject_list, grandavg, [], path2save, path2inputfile);
 
+%% grand avg
+path2subj = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+subject_list = dir (path2subj);
+subject_list([1 2],:) = [];
+folderpath = 'MEG_analysis\noisereduced\1_95Hz\grandavg_50ms\';
+adi_grandavg_group(subject_list, folderpath);
 
-%% überprüfe, ob 50ms trigger fälschlicherweise zugeordet wurden:
+%% überprüfe, ob 50ms trigger fälschlicherweise zugeordet wurden: nicht genutzt
 
 clear
 fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
@@ -150,6 +122,8 @@ for i=1:length(ListSubj)
     path2cleanfile = [fieldtripPath ListSubj(i).name '\MEG_analysis\noisereduced\0.5_95Hz\01_clean\'];
     adi_check_for_50ms_trigger(path2cleanfile, trigger, ListSubj(i).name)
 end
+
+
 
 %% export warped anatomy:
 clear

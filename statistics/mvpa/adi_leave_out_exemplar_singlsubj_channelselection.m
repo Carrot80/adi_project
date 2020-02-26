@@ -1,5 +1,6 @@
-function [] = adi_leave_out_exemplar_singlsubj(mainpath, subjectdir, balldesign)
+function [] = adi_leave_out_exemplar_singlsubj(mainpath, subjectdir, balldesign, channelselection)
 
+% changed: 26.2.2020
 
 for ii = 2:length(subjectdir)
     
@@ -80,10 +81,10 @@ for ii = 2:length(subjectdir)
     clear balldesign_array
     
     %% MVPA  
-   [perf] = mvpa_leave_out_balldesign(session, balldesign);
+   [perf] = mvpa_leave_out_balldesign(session, balldesign, channelselection);
 %     perf.config.methods = 'bootstrap 2*trialnumber';
 %     perf.config.methods = 'bootstrap_pseudotrials';
-    perf.config.methods = 'perf_without_pca_bootstrap_4pseudotrials_trainfold_only';
+    perf.config.methods = 'perf_bootstrap_4pseudotrials_trainfold_only_temp_occipital sensors on basis of searchlight analysis';
     perf.config.comment = ' da alle trials mit den uneindeutigen Antworten zur Klassifikation genutzt worden, wurden nur trials aus dem trainfold zur Bildung von Pseudotrials gemittelt. Bedingung mit kleinerem N wurde größeren angepasst ';
 
     perf.ratings = like_dislike_ratings;
@@ -93,7 +94,7 @@ for ii = 2:length(subjectdir)
     plot(session.time{1,1}, mean(perf.svm.accuracy), 'b')
     plot(session.time{1,1}, mean(perf.logreg.accuracy), 'r')
     plot(session.time{1,1}, 0.5*ones(1, length(session.time{1,1})), '--')
-    title('Accuracy without PCA')
+    title('Accuracy temporal-occipital')
     legend('lda', 'svm', 'logreg', ' ')
    
     
@@ -104,12 +105,12 @@ for ii = 2:length(subjectdir)
        CI(kk).logreg = ci(perf.logreg.accuracy(:,kk));
    end
     
-    if ~exist([mainpath subjectdir(ii).name filesep 'MEG_analysis\noisereduced\1_95Hz\mvpa\'], 'dir')
-        mkdir([mainpath subjectdir(ii).name filesep 'MEG_analysis\noisereduced\1_95Hz\mvpa\'])
+    if ~exist([mainpath subjectdir(ii).name filesep 'MEG_analysis\noisereduced\1_95Hz\mvpa\searchlight\mvpa_temp_occ\'], 'dir')
+        mkdir([mainpath subjectdir(ii).name filesep 'MEG_analysis\noisereduced\1_95Hz\mvpa\searchlight\mvpa_temp_occ\'])
     end
-    savefig([mainpath subjectdir(ii).name filesep 'MEG_analysis\noisereduced\1_95Hz\mvpa\perf_without_pca_bootstrap_pseudotrials_trainfold_only_1xnum_trials_new.fig'])
+    savefig([mainpath subjectdir(ii).name filesep 'MEG_analysis\noisereduced\1_95Hz\mvpa\searchlight\mvpa_temp_occ\perf_bootstrap_pseudotrials_trainfold_only_1xnum_trials_temp_occ.fig'])
    
-    save([mainpath subjectdir(ii).name filesep 'MEG_analysis\noisereduced\1_95Hz\mvpa\perf_without_pca_bootstrap_pseudotrials_trainfold_only_1xnum_trials_new.mat'], 'perf')
+    save([mainpath subjectdir(ii).name filesep 'MEG_analysis\noisereduced\1_95Hz\mvpa\searchlight\mvpa_temp_occ\perf_bootstrap_pseudotrials_trainfold_only_1xnum_trials_temp_occ..mat'], 'perf')
     clear session
 end
 
@@ -118,7 +119,7 @@ end
 
 end
 
-function [perf] = mvpa_leave_out_balldesign(session, balldesign)
+function [perf] = mvpa_leave_out_balldesign(session, balldesign, channelselection)
 
 %% Get default hyperparameters for the logreg and lda classifier
 param_logreg = mv_get_hyperparameter('logreg');
@@ -152,7 +153,6 @@ for kk = 1:length(CV)
 %         exist()
 %     end
 %     
-    
     
     train_fold = data_trials;
     train_fold(CV(kk).testset,:,:) = [];  
@@ -232,12 +232,15 @@ for kk = 1:length(CV)
 %     cfg.repetitions = numel(trials_testfold.trial);
 %     bootstrap_testfold = fte_subaverage(cfg, trials_testfold);
 %     data_bootstrap_testfold = kh_trial2dat(bootstrap_testfold.trial);
-    
+
+   for jj = 1:length(channelselection)
+       chan_ind(jj) = find(strcmp(channelselection{jj}, session.label));
+   end
     
     %%  lda for single time points  
     for tt = 1:size(session.time{1,1},2)
-        cf_lda{kk, tt} = train_lda(param_lda, data_bootstrap_trainfold(:,:,tt), clabel_train_fold);
-        [predlabel, dval] = test_lda(cf_lda{kk, tt}, test_fold(:,:,tt)); 
+        cf_lda{kk, tt} = train_lda(param_lda, data_bootstrap_trainfold(:,chan_ind,tt), clabel_train_fold);
+        [predlabel, dval] = test_lda(cf_lda{kk, tt}, test_fold(:,chan_ind,tt)); 
         % To calculate classification accuracy, compare the predicted labels to
         % the true labels and take the mean
         
@@ -250,8 +253,8 @@ for kk = 1:length(CV)
     
         %%  svm for single time points  
     for tt = 1:size(session.time{1,1},2)   
-        cf_svm{kk, tt} = train_svm(param_svm, data_bootstrap_trainfold(:,:,tt), clabel_train_fold);
-        [predlabel, dval] = test_svm(cf_svm{kk,tt}, test_fold(:,:,tt));
+        cf_svm{kk, tt} = train_svm(param_svm, data_bootstrap_trainfold(:,chan_ind,tt), clabel_train_fold);
+        [predlabel, dval] = test_svm(cf_svm{kk,tt}, test_fold(:,chan_ind,tt));
         % To calculate classification accuracy, compare the predicted labels to
         % the true labels and take the mean
         
@@ -262,8 +265,8 @@ for kk = 1:length(CV)
     
        %% logreg for single time points  
     for tt = 1:size(session.time{1,1},2)   
-        cf_logreg{kk, tt} = train_logreg(param_logreg, data_bootstrap_trainfold(:,:,tt), clabel_train_fold);
-        [predlabel, dval, prob] = test_logreg(cf_logreg{kk, tt}, test_fold(:,:,tt));
+        cf_logreg{kk, tt} = train_logreg(param_logreg, data_bootstrap_trainfold(:,chan_ind,tt), clabel_train_fold);
+        [predlabel, dval, prob] = test_logreg(cf_logreg{kk, tt}, test_fold(:,chan_ind,tt));
         % To calculate classification accuracy, compare the predicted labels to
         % the true labels and take the mean
 

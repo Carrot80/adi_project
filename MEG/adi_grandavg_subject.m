@@ -1,13 +1,13 @@
-function  [grandavg] = grandavg_sensorspace(subjectpath, grandavg, delete_run)
+function  [grandavg, trl_count] = grandavg_sensorspace(subjectpath, grandavg, delete_run, path2save, path2inputfile)
 
 if 1 == isempty(delete_run)
 %     counter_like = 1;
 %     counter_dislike = 1;
 %     counter_dontcare = 1;
     
-    for ii = 1:length(subjectpath)
+    for ii = [10] %:length(subjectpath)
         %% like
-        filename = dir([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\02_interpolated\Neu_Like*.mat']);
+        filename = dir([subjectpath(ii).folder filesep subjectpath(ii).name filesep  path2inputfile 'Neu_Like*.mat']);
          counter = 1;
         for kk = 1:length(filename)
             load ([filename(kk).folder filesep filename(kk).name])
@@ -20,20 +20,34 @@ if 1 == isempty(delete_run)
             cfg.lpfilter = 'yes';
             cfg.lpfreq   = 45;     
             cfg.demean = 'yes';
-            cfg.baselinewindow  = [-0.5 0];
+            cfg.baselinewindow  = [-0.5 -0.030];
             data = ft_preprocessing(cfg, cleanMEG_interp);
+            
+            %% select data
+            
             cfg = [];
             cfg.latency = [-0.5 1];
+            data = ft_selectdata(cfg, data);
+            
+            %% z-transformation:
+             [data] = subfun_ztransform(data);
+             
+            %% timelockanalysis:
+            cfg = [];
             avg = ft_timelockanalysis(cfg, data);
             avg.subject = subjectpath(ii).name; 
             avg.run = filename(kk).name(end-4);   
             avg.balldesign = cleanMEG_interp.trialinfo.balldesign_short;
-            grandavg.like.(subjectpath(ii).name)(counter).avg = avg; 
+            grandavg.like.(subjectpath(ii).name)(counter).avg = avg;
+            trl_count.like(ii,counter) = length(cleanMEG_interp.trial);
             clear avg cleanMEG_interp data
             counter = counter + 1;
         end     
         counter = counter - 1;
+        
         % grandavg like per subject 
+        
+        
         cfg = [];
         cfg.method  = 'within';
         switch counter
@@ -44,18 +58,19 @@ if 1 == isempty(delete_run)
             case 1
                 avg_like = grandavg.like.(subjectpath(ii).name)(counter).avg;
         end
-        if ~exist([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\grandavg\'], 'dir')
-            mkdir([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\grandavg\'])
+        if ~exist([subjectpath(ii).folder filesep subjectpath(ii).name filesep  path2save], 'dir')
+            mkdir([subjectpath(ii).folder filesep subjectpath(ii).name filesep  path2save])
         end
-        save ([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\grandavg\grandavg_like.mat' ], 'avg_like');
+        save ([subjectpath(ii).folder filesep subjectpath(ii).name filesep path2save 'grandavg_like.mat' ], 'avg_like');
         figure
         plot(avg_like.time, avg_like.avg)
         title('grandavg like')
-        savefig ([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\grandavg\grandavg_like.fig' ]);
+        axis tight
+        savefig ([subjectpath(ii).folder filesep subjectpath(ii).name filesep  path2save 'grandavg_like.fig' ]);
         
         
         %% dislike:
-         filename = dir([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\02_interpolated\Neu_Dislike*.mat']);
+         filename = dir([subjectpath(ii).folder filesep subjectpath(ii).name filesep  path2inputfile 'Neu_Dislike*.mat']);
          counter = 1;
         for kk = 1:length(filename)
             load ([filename(kk).folder filesep filename(kk).name])
@@ -68,15 +83,26 @@ if 1 == isempty(delete_run)
             cfg.lpfilter = 'yes';
             cfg.lpfreq   = 45;     
             cfg.demean = 'yes';
-            cfg.baselinewindow  = [-0.5 0];
+            cfg.baselinewindow  = [-0.5 -0.030];
             data = ft_preprocessing(cfg, cleanMEG_interp);
+            
+            %% select data
             cfg = [];
             cfg.latency = [-0.5 1];
+            data = ft_selectdata(cfg, data);
+            
+            %% z-transformation:
+             [data] = subfun_ztransform(data);
+            
+            %% timelockanalysis
+            
+            cfg = [];
             avg = ft_timelockanalysis(cfg, data);
             avg.subject = subjectpath(ii).name; 
             avg.run = filename(kk).name(end-4);   
             avg.balldesign = cleanMEG_interp.trialinfo.balldesign_short;
             grandavg.dislike.(subjectpath(ii).name)(counter).avg = avg; 
+            trl_count.dislike(ii,counter) = length(cleanMEG_interp.trial);
             clear avg cleanMEG_interp data
             counter = counter + 1;
         end     
@@ -92,19 +118,19 @@ if 1 == isempty(delete_run)
             case 1
                 avg_dislike = grandavg.dislike.(subjectpath(ii).name)(counter).avg;
         end
-        if ~exist([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\grandavg\'], 'dir')
-            mkdir([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\grandavg\'])
+        if ~exist([subjectpath(ii).folder filesep subjectpath(ii).name filesep  path2save], 'dir')
+            mkdir([subjectpath(ii).folder filesep subjectpath(ii).name filesep  path2save])
         end
-        save ([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\grandavg\grandavg_dislike.mat' ], 'avg_dislike');
+        save ([subjectpath(ii).folder filesep subjectpath(ii).name filesep  path2save 'grandavg_dislike.mat' ], 'avg_dislike');
         figure
         plot(avg_dislike.time, avg_dislike.avg)
         title('grandavg dislike')
-        savefig ([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\grandavg\grandavg_dislike.fig' ]);
+        savefig ([subjectpath(ii).folder filesep subjectpath(ii).name filesep  path2save 'grandavg_dislike.fig' ]);
        
          
         
           %% dontcare:
-         filename = dir([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\02_interpolated\Neu_Dontcare*.mat']);
+         filename = dir([subjectpath(ii).folder filesep subjectpath(ii).name filesep  path2inputfile 'Neu_Dontcare*.mat']);
          counter = 1;
          if ~isempty(filename)
             for kk = 1:length(filename)
@@ -118,15 +144,25 @@ if 1 == isempty(delete_run)
                 cfg.lpfilter = 'yes';
                 cfg.lpfreq   = 45;     
                 cfg.demean = 'yes';
-                cfg.baselinewindow  = [-0.5 0];
+                cfg.baselinewindow  = [-0.5 -0.030];
                 data = ft_preprocessing(cfg, cleanMEG_interp);
+                
+                %% select data
                 cfg = [];
                 cfg.latency = [-0.5 1];
+                data = ft_selectdata(cfg, data);
+
+                %% z-transformation:
+                 [data] = subfun_ztransform(data);
+            
+            %% timelockanalysis
+                cfg = [];
                 avg = ft_timelockanalysis(cfg, data);
                 avg.subject = subjectpath(ii).name; 
                 avg.run = filename(kk).name(end-4);   
                 avg.balldesign = cleanMEG_interp.trialinfo.balldesign_short;
                 grandavg.dontcare.(subjectpath(ii).name)(counter).avg = avg; 
+                trl_count.dontcare(ii,counter) = length(cleanMEG_interp.trial);
                 clear avg cleanMEG_interp data
                 counter = counter + 1;
             end  
@@ -143,24 +179,60 @@ if 1 == isempty(delete_run)
                 case 1
                     avg_dontcare = grandavg.dontcare.(subjectpath(ii).name)(counter).avg;
             end
-            if ~exist([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\grandavg\'], 'dir')
-                mkdir([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\grandavg\'])
+            if ~exist([subjectpath(ii).folder filesep subjectpath(ii).name filesep  path2save], 'dir')
+                mkdir([subjectpath(ii).folder filesep subjectpath(ii).name filesep  path2save 'grandavg\'])
             end
-            save ([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\grandavg\grandavg_dontcare.mat' ], 'avg_dontcare');
+            save ([subjectpath(ii).folder filesep subjectpath(ii).name filesep  path2save 'grandavg_dontcare.mat' ], 'avg_dontcare');
             figure
             plot(avg_dontcare.time, avg_dontcare.avg)
             title('grandavg dontcare')
-            savefig ([subjectpath(ii).folder filesep subjectpath(ii).name filesep  'MEG_analysis\noisereduced\1_95Hz\grandavg\grandavg_dontcare.fig' ]);
+            savefig ([subjectpath(ii).folder filesep subjectpath(ii).name filesep  path2save 'grandavg_dontcare.fig' ]);
          end
+        close all
         
+       %% global field power: 
+        cfg = [];
+        cfg.method = 'power';
+        [gmf_like] = ft_globalmeanfield(cfg, avg_like);
+        [gmf_dislike] = ft_globalmeanfield(cfg, avg_dislike);
+        if exist('avg_dontcare', 'var')
+            [gmf_dontcare] = ft_globalmeanfield(cfg, avg_dontcare);
+            figure('Renderer', 'painters', 'Position', [300 300 800 200])
+            plot(gmf_like.time, gmf_like.avg, 'r')
+            axis tight
+            hold on
+            plot(gmf_dislike.time, gmf_dislike.avg, 'b')
+            hold on
+            plot(gmf_dontcare.time, gmf_dontcare.avg, 'k:')
+            legend({'like'; 'dislike'; 'dontcare'})
+            legend('boxoff') 
+            title('global field power ')
+         
+            savefig([subjectpath(ii).folder filesep subjectpath(ii).name filesep  path2save 'global_field_power_avg.fig' ]);
+            clear avg_dontcare
+        else
+            figure('Renderer', 'painters', 'Position', [300 300 800 200])
+            plot(gmf_like.time, gmf_like.avg)
+            axis tight
+            hold on
+            plot(gmf_dislike.time, gmf_dislike.avg)
+            legend({'like'; 'dislike'})
+            title('global field power ')
+            legend('boxoff') 
+            savefig([subjectpath(ii).folder filesep subjectpath(ii).name filesep  path2save 'global_field_power_avg.fig' ]);
+            
+        end
+        close all
+        clear avg_like avg_dislike
+         
     end
-    
+        
 else
     counter_like=1;
     counter_dislike=1;
     cfg = [];
     for i=1:length(subjectpath)
-        filename = dir([subjectpath(i).folder filesep subjectpath(i).name filesep  'MEG_analysis\noisereduced\1_95Hz\02_interpolated\Neu_Like*.mat']);
+        filename = dir([subjectpath(i).folder filesep subjectpath(i).name filesep  path2inputfile 'Neu_Like*.mat']);
 
         for k=1:length(filename)
             load ([filename(k).folder filesep filename(k).name])
@@ -245,6 +317,33 @@ end
 
 
 
+
+
+end
+
+
+function [output_data_zscore] = subfun_ztransform(input_data)
+
+baseline_zero_samples = nearest(input_data.time{1,1},-0.03);
+baseline_dur_samples = nearest(input_data.time{1,1}, -0.5);
+
+output_data_zscore = input_data;
+
+for pp=1:length(input_data)
+    output_data_zscore(pp).trial = [];
+    output_data_zscore(pp).trial = cell(1, length(input_data(pp).trial));
+    for kk = 1:length(input_data(pp).trial)
+        output_data_zscore(pp).trial{kk} = zeros(size(input_data(pp).trial{kk},1),size(input_data(pp).trial{kk},2));
+        for oo = 1:size(input_data(pp).trial{kk},1)   
+            M = mean(input_data(pp).trial{kk}(oo, baseline_dur_samples:baseline_zero_samples));
+            STD = std(input_data(pp).trial{kk}(oo,baseline_dur_samples:baseline_zero_samples));
+            output_data_zscore(pp).trial{kk}(oo,:) = (input_data(pp).trial{kk}(oo,:)- M)/STD;
+            clearvars M STD
+        end
+    end
+end
+
+clear input_data
 
 
 end

@@ -11,7 +11,7 @@ end
 
 
 
-%% 24.7. crossvalidation leave out one exemplar per subject with feature reduction:
+%% 24.7. crossvalidation leave out one exemplar per subject with or without feature reduction:
 
 clear
 path2subjects = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';

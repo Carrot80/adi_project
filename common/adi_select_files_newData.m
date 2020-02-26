@@ -1,14 +1,14 @@
 function adi_select_files (inpath, subject, outpath)
 
-    ListDir             = dir(fullfile([inpath subject filesep 'Neu*50_*'])); % get a list of folders in directory
+    ListDir             = dir(fullfile([inpath subject filesep 'Neu_*500_*'])); % get a list of folders in directory
     isTimelock          = 1; % isTimelock --> RawData (0) or TimeLock Data (1)
     
-    for k=1:length(ListDir)
-        fileList = dir(fullfile([ListDir(k).folder filesep ListDir(k).name filesep 'data*.mat']));  
-        if exist ([ListDir(k).folder filesep ListDir(k).name filesep 'channel_4d_acc1.mat'], 'file') && ~exist([outpath, ListDir(k).name '.mat'], 'file')
-            ChannelFile     = load ([ListDir(k).folder filesep ListDir(k).name filesep 'channel_4d_acc1.mat']); 
+    for kk = 1:length(ListDir)
+        fileList = dir(fullfile([ListDir(kk).folder filesep ListDir(kk).name filesep 'data*.mat']));  
+        if exist ([ListDir(kk).folder filesep ListDir(kk).name filesep 'channel_4d_acc1.mat'], 'file') && ~exist([outpath, ListDir(kk).name '.mat'], 'file')
+            ChannelFile     = load ([ListDir(kk).folder filesep ListDir(kk).name filesep 'channel_4d_acc1.mat']); 
             [ft_data]       = adi_mk_ft_structure(ChannelFile, fileList, isTimelock) ;  % Convertiert Brainstorm-files in Fieldtrip-Files
-            save ([outpath, filesep, ListDir(k).name], 'ft_data');
+            save ([outpath, filesep, ListDir(kk).name], 'ft_data');
             clearvars ft_data fileList ChannelFile;
         end
     end

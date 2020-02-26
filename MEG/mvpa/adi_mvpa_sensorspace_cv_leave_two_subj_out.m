@@ -1,7 +1,7 @@
 function [] = adi_mvpa_sensorspace_holdout(balldesign, fn_input, input_path, fn2save, path2save, config)
 
 
-%% hold out: leave one subject out with pseudo trials
+%% hold out: leave two subjects out
 
 if ~exist(path2save, 'dir')
     mkdir(path2save)
@@ -80,7 +80,7 @@ end
 rng('default')
 
 %% Crossvalidation folds
-num_holdout = 1;
+num_holdout = 2;
 CV = adi_crossval(like.subject_num, dislike.subject_num, 'holdout', num_holdout);
 
 %% Get default hyperparameters for the logreg and lda classifier

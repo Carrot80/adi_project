@@ -1,69 +1,34 @@
-%% ab 28.6.2019 => noch mal von vorne angefangen, um Jeff's Methode zur Artefaktbereinigung zu verwenden
+%% 4.12.2018, nochmal neu am 30.8., da falsche baseline correction
+% neue Daten
 
 
-
-%% remove unwanted brainstorm files (bandpass, zscore)
-
+%% main settings:
 clear
-brainstormPath  = 'W:\neurochirurgie\science\Franzi\Database\BS_TrainingGroup\brainstorm_db\';
-fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
-ListSubj = dir(fieldtripPath);
-ListSubj(1:2) = [];
-filter     = '1_95Hz';  
- for i = 1:length(ListSubj)    
-    adi_remove_brainstorm_files (brainstormPath, ListSubj(i).name)
- end
-
-
-    
- %% Export Brainstorm-Files to Fieldtrip:   
-
-clear
-brainstormPath  = 'W:\neurochirurgie\science\Franzi\Database\BS_TrainingGroup\brainstorm_db\';
-fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
-ListSubj = dir(fieldtripPath);
-ListSubj(1:2) = [];
-filter     = '1_95Hz';  
- for i = length(ListSubj)    
-     path_export_bst2ft   = ([fieldtripPath ListSubj(i).name '\MEG_EEG_input\noisereduced\' filter '\02_Export_Bst2Ft\']);
-     if ~exist(path_export_bst2ft, 'dir')
-         mkdir(path_export_bst2ft)
-     end  
-    adi_select_files_newData (brainstormPath, ListSubj(i).name, path_export_bst2ft)
- end
- 
- %% adi_04 =>> channels umsortieren
-clear
-inpath = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\nl_adi_04\MEG_analysis\noisereduced\1_95Hz\01_clean\alte_Kanalsortierung\';
-path_new_labels = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\nl_adi_05\MEG_analysis\noisereduced\1_95Hz\01_clean\Neu_Like500_1.mat';
-outpath = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\nl_adi_04\MEG_analysis\noisereduced\1_95Hz\01_clean\';
-
-kh_sort_channels(inpath, path_new_labels, outpath)
-
-%% entferne bad channels und ICA 
-% 28.6.19 ICA nach Jeff's Empfehlung => nicht fertig
-clear
+brainstormPath = 'E:\adidas\Daten_Franzi\Database12-2018\BS_TrainingGroup\brainstorm_db\';
+% ==> alte Datenbank für dontcares wichtig
+% brainstormPath  = 'W:\neurochirurgie\science\Franzi\Database\BS_TrainingGroup\brainstorm_db\';
 fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
 ListSubj = dir(fieldtripPath);
 ListSubj(1:2) = [];
 filter     = '1_95Hz';
+    
+ %% Export Brainstorm-Files to Fieldtrip:   
+    
+ % zu beachten: nl_adi_07: run 1 aussortieren 
+  
+ for ii = 18%:length(ListSubj)    
+     path_export_bst2ft   = ([fieldtripPath ListSubj(ii).name '\MEG_EEG_input\noisereduced\' filter '\02_Export_Bst2Ft\']);
+     if ~exist(path_export_bst2ft, 'dir')
+         mkdir(path_export_bst2ft)
+     end  
+    adi_select_files_newData (brainstormPath, ListSubj(ii).name, path_export_bst2ft)
+ end
 
-for i = 29 %6:length(ListSubj)  
-    path2data = ([fieldtripPath, ListSubj(i).name, '\MEG_EEG_input\noisereduced\' filter '\02_Export_Bst2Ft\']);
-    path_ICA = ([fieldtripPath ListSubj(i).name '\MEG_analysis\noisereduced\' filter '\01_ica\']);
-    if ~exist(path_ICA, 'dir')
-        mkdir(path_ICA)
-    end
-        
-    adi_remove_comp_ica (path2data, path_ICA)
-end 
  
- 
-
 %% füge trigger und balldesign hinzu und entferne bad channels:
 
 clear
-fieldtripPath = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
 ListSubj = dir(fieldtripPath);
 ListSubj(1:2) = [];
 filter  = '1_95Hz';
@@ -73,100 +38,187 @@ trigger.balldesign = {'yellow_blue_volley', 'red_white_space', 'red_white_soccer
 trigger.triggercodes = [102, 104, 106, 108, 4196, 4198, 4200, 4202, 4204];
 trigger.eprime        = [102, 104, 106, 108, 101, 103, 105, 107, 109];
 
-for ii = 4:length(ListSubj)  
+for ii = 18:length(ListSubj) 
+%     brainstormPath  = 'W:\neurochirurgie\science\Franzi\Database\BS_TrainingGroup\brainstorm_db\';
+    brainstormPath = 'E:\adidas\Daten_Franzi\Database12-2018\BS_TrainingGroup\brainstorm_db\';
     path2cleanfile = ([fieldtripPath, ListSubj(ii).name, '\MEG_analysis\noisereduced\', filter, '\01_clean\']);
-    bst_path = ['W:\neurochirurgie\science\Franzi\Database\BS_TrainingGroup\brainstorm_db\'];
-    path2retval = ([fieldtripPath, ListSubj(ii).name, '\MEG_EEG_input\noisereduced\' filter '\02_Export_Bst2Ft\']);
-    adi_artifact_cleaning_newData(path2retval, bst_path, path2cleanfile, ListSubj(ii).name, filter, trigger)    
+    path2ft_data = ([fieldtripPath, ListSubj(ii).name, '\MEG_EEG_input\noisereduced\' filter '\02_Export_Bst2Ft\']);
+    adi_artifact_cleaning_newData(path2ft_data, brainstormPath, path2cleanfile, ListSubj(ii).name, filter, trigger)    
 end
 
 
-%% rejectvisual zusätzliche Säuberung einzelner Runs: für neue Daten nicht genutzt
-% nl_adi_19, nl_adi21        
+
+ %% adi_04 =>> channels umsortieren
+clear
+inpath = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\nl_adi_04\MEG_analysis\noisereduced\1_95Hz\01_clean\alte_Kanalsortierung\';
+path_new_labels = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\nl_adi_05\MEG_analysis\noisereduced\1_95Hz\01_clean\Neu_Like500_1.mat';
+outpath = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\nl_adi_04\MEG_analysis\noisereduced\1_95Hz\01_clean\';
+
+kh_sort_channels(inpath, path_new_labels, outpath)
+
+
+
+%% rejectvisual zusätzliche Säuberung einzelner Runs: 
+% nl_adi_19, nl_adi_20, nl_adi_21        
 clear
 fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
 ListSubj = dir(fieldtripPath);
 ListSubj(1:2) = [];
 
-    for i = 29% : length(ListSubj)  
+    for ii = 17%16%18% : length(ListSubj)  
         
-        path2cleanfile = ([fieldtripPath, ListSubj(i).name, '\MEG_analysis\noisereduced\1_95Hz\01_clean\']);
-        path_interpolated = ([fieldtripPath, ListSubj(i).name, '\MEG_analysis\noisereduced\1_95Hz\02_interpolated\']);
-        adi_rejectvisual_MEG_extra (path2cleanfile, path_interpolated, ListSubj(i).name)
+        path2cleanfile = ([fieldtripPath, ListSubj(ii).name, '\MEG_analysis\noisereduced\1_95Hz\01_clean\']);
+        adi_rejectvisual_MEG_extra (path2cleanfile, ListSubj(ii).name)
     end
        
-%% für neue Daten nicht genutzt:
-% nl_adi_33 => A248 rauswerfen
-% nl_adi_19 => dontcare500_1: ab 1.28 sekunden Artefakt => Zeitintervall begrenzen:
+%% Überall Kanal A248 rauswerfen:
 
 clear
 fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
 ListSubj = dir(fieldtripPath);
-file = ([fieldtripPath, ListSubj(16).name, '\MEG_analysis\noisereduced\1_95Hz\01_clean\dontcare500_1.mat']);
-load (file)  
-cfgn                = [];
-cfgn.parameter      = 'trial';
-cfgn.keeptrials     = 'yes'; % classifiers operate on individual trials
-cfgn.vartrllength   = 2;
-tcleanMEG         = ft_timelockanalysis(cfgn,cleanMEG);  
-figure
-plot(tcleanMEG.time, tcleanMEG.avg(1:248,:)) % MEG
-for k = 1:length(cleanMEG.trial)
-cleanMEG.trial{k}(:,2310:end) = [];
-cleanMEG.time{k}(:,2310:end) = [];    
+ListSubj(1:2) = [];
+
+    for ii = 2:length(ListSubj)
+        
+        path2cleanfile = ([fieldtripPath, ListSubj(ii).name, '\MEG_analysis\noisereduced\1_95Hz\01_clean\']);
+        adi_reject_A248 (path2cleanfile, ListSubj(ii).name)
+    end
+
+%% interpolate missing channels without baseline correction:
+clear
+fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+ListSubj = dir(fieldtripPath);
+ListSubj(1:2) = [];
+filter  = '1_95Hz';
+
+for ii = 10%:length(ListSubj)  
+    path2cleanfile = ([fieldtripPath ListSubj(ii).name '\MEG_analysis\noisereduced\' filter '\01_clean\']);
+    pathInterpolated = ([fieldtripPath ListSubj(ii).name '\MEG_analysis\noisereduced\' filter '\02_interpolated\']);
+
+    adi_interpolate_MEG (path2cleanfile, pathInterpolated)
 end
 
-tcleanMEG = ft_timelockanalysis(cfgn,cleanMEG);  
-figure
-plot(tcleanMEG.time, tcleanMEG.avg(1:248,:)) % MEG
-    
-% nl_adi_21:
+%% Anzahl an trials pro Proband und Bedingung
 clear
 fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
 ListSubj = dir(fieldtripPath);
-file = ([fieldtripPath, 'nl_adi_21\MEG_analysis\noisereduced\1_95Hz\01_clean\dislike500_1.mat']);
-load (file)  
-cfgn                = [];
-cfgn.parameter      = 'trial';
-cfgn.keeptrials     = 'yes'; % classifiers operate on individual trials
-cfgn.vartrllength   = 2;
-tcleanMEG         = ft_timelockanalysis(cfgn,cleanMEG);  
-figure
-plot(tcleanMEG.time, tcleanMEG.avg(1:248,:)) % MEG
-cfg = [];
-cfg.method = 'summary';%'trial'% 'summary' %, 'trial'
-cfg.channel = 'MEG'; % MEG
-cfg.keepchannel = 'nan';
-cfg.latency = [-0.5 0];
-cfg.megscale = 1;
-cfg.eegscale = 5e-8;
-cfg.interactive = 'yes';
-cfg.alim     = 1e-12; 
-[cleanMEG]       = ft_rejectvisual(cfg, cleanMEG); 
-tcleanMEG         = ft_timelockanalysis(cfgn,cleanMEG);  
-figure
-plot(tcleanMEG.time, tcleanMEG.avg(1:248,:)) % MEG
-[cleanMEG]       = ft_rejectvisual(cfg, cleanMEG); 
- tcleanMEG         = ft_timelockanalysis(cfgn,cleanMEG);  
-figure
-plot(tcleanMEG.time, tcleanMEG.avg(1:248,:)) % MEG
+ListSubj(1:2) = [];
+filter  = '1_95Hz';
+adi_count_trials(subject_list)
 
 
-%% interpolate missing channels:
+%% dontcare und dislike zusammen mitteln
+
+%% check head position within sensor:
+
+clear
+fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+path2folder = 'MEG_analysis\noisereduced\1_95Hz\01_clean';
+ListSubj = dir(fieldtripPath);
+ListSubj(1:2) = [];
+filter  = '1_95Hz';
+check_headposition_within_sensor(ListSubj, fieldtripPath, path2folder)
+
+
+
+
+%% grand avg per subject:
+clear
+path2subj = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+subject_list = dir (path2subj);
+subject_list([1 2],:) = [];
+path2save = 'MEG_analysis\noisereduced\1_95Hz\grandavg\';
+path2inputfile = 'MEG_analysis\noisereduced\1_95Hz\02_interpolated\';
+grandavg = []; 
+[grandavg, trl_count] = adi_grandavg_subject(subject_list, grandavg, [], path2save, path2inputfile);
+% save('W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\group_analysis\sensor_space\MEG\grandavg_all_trls\grandavg_all_trls.mat', 'grandavg', '-v7.3')
+
+
+%% grand avg
+path2subj = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+subject_list = dir (path2subj);
+subject_list([1 2],:) = [];
+folderpath = 'MEG_analysis\noisereduced\1_95Hz\grandavg\';
+adi_grandavg_group(subject_list, folderpath);
+
+
+%% grand avg all trials
+path2subj = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+subject_list = dir (path2subj);
+subject_list([1 2],:) = [];
+grandavg = []; 
+[grandavg] = adi_grandavg_sensorspace(subject_list, grandavg, []);
+save('W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\group_analysis\sensor_space\MEG\grandavg_all_trls\grandavg_all_trls.mat', 'grandavg')
+
+%% ERF statistical analysis => noch nicht fertig
+path2subj = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+subject_list = dir (path2subj);
+subject_list([1 2],:) = [];
+dir_input = 'MEG_analysis\noisereduced\1_95Hz\grandavg\';
+path2save = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\group_analysis\sensor_space\MEG\grandavg_all_trls\';
+comp = ([.03 .15; .15 .56; .56 .74]);
+adi_ERF_statistics(subject_list, dir_input, path2save, comp)
+
+%%
+path2subj = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+subject_list = dir (path2subj);
+subject_list([1 2],:) = [];
+comp1 = [0.03 0.15];
+folderpath = 'MEG_analysis\noisereduced\1_95Hz\grandavg\';
+[Amplitude] = adi_gmp_comp1(subject_list, folderpath, comp1);
+
+
+RMS_like = Amplitude.like.rms';
+Amp_like = Amplitude.like.amp';
+RMS_dislike = Amplitude.dislike.rms';
+Amp_dislike = Amplitude.dislike.amp';
+ratio_RMS = RMS_like./RMS_dislike;
+ratio_amp = Amp_like./Amp_dislike;
+
+
+% evtl. vorher z-transformieren!
+% 
+% [rho,pval] = corr(ratio_like,RMS_like, 'Type', 'Spearman') % ratio_like siehe Excel-Tabelle, nicht signifikant, allerdings keine z-transformation
+% [rho,pval] = corr(ratio_like,Amp_like, 'Type', 'Spearman')
+% [rho,pval] = corr(ratio_like,RMS_dislike, 'Type', 'Spearman') % ratio_like siehe Excel-Tabelle, nicht signifikant, allerdings keine z-transformation
+% [rho,pval] = corr(ratio_like,RMS_dislike, 'Type', 'Pearson')
+% [rho,pval] = corr(ratio_like,Amp_dislike, 'Type', 'Spearman')
+
+[rho_rms, pval_rms] = corr(ratio_like,ratio_RMS, 'Type', 'Spearman') % ratio_like siehe Excel-Tabelle, nicht signifikant, allerdings keine z-transformation
+[rho_amp,pval_amp] = corr(ratio_like ,ratio_amp, 'Type', 'Spearman')
+figure
+scatter(ratio_like, ratio_RMS)
+figure
+scatter(ratio_like, ratio_amp)
+
+
+find(ratio_RMS == max(ratio_RMS))
+ratio_RMS2 =ratio_RMS;
+ratio_like2 = ratio_like;
+[rho_rms2, pval_rms2] = corr(ratio_like2,ratio_RMS2, 'Type', 'Spearman')
+
+
+figure
+scatter(ratio_like, ratio_RMS)
+figure
+scatter(ratio_like, ratio_amp)
+
+%% 28.6.19 ICA nach Jeff's Empfehlung => funktioniert noch nicht, bisher nicht genutzt
 clear
 fieldtripPath      = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
 ListSubj = dir(fieldtripPath);
 ListSubj(1:2) = [];
 filter     = '1_95Hz';
 
-for i = 1%:length(ListSubj)  
+for i = 1:length(ListSubj)  
     path2cleanfile = ([fieldtripPath ListSubj(i).name '\MEG_analysis\noisereduced\' filter '\01_clean\']);
-    pathInterpolated = ([fieldtripPath ListSubj(i).name '\MEG_analysis\noisereduced\' filter '\02_interpolated\']);
-
-    adi_interpolate_MEG (path2cleanfile, pathInterpolated)
+    path_ICA = ([fieldtripPath ListSubj(i).name '\MEG_analysis\noisereduced\' filter '\02_ica\']);
+    if ~exist(path_ICA, 'dir')
+        mkdir(path_ICA)
+    end
+        
+    adi_remove_comp_ica (path2cleanfile, path_ICA)
 end
-
-
 
 %% überprüfe, ob 50ms trigger fälschlicherweise zugeordet wurden:
 
@@ -186,6 +238,440 @@ for i=1:length(ListSubj)
     path2cleanfile = [fieldtripPath ListSubj(i).name '\MEG_analysis\noisereduced\0.5_95Hz\01_clean\'];
     adi_check_for_50ms_trigger(path2cleanfile, trigger, ListSubj(i).name)
 end
+
+
+%% searchlight: 08.10.19
+clear
+path2subjects = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+subjects_dir = dir(path2subjects);
+subjects_dir(1:2,:) = [];
+balldesign = {'gbf'; 'gbs'; 'gbv'; 'ggf'; 'rwv'; 'rws'; 'rwf'; 'ggs'; 'ggv'};
+load('U:\My Documents\MATLAB\Bibliotheken\fieldtrip-20190419\template\neighbours\bti248_neighb.mat')
+filename = 'MEG_analysis\noisereduced\1_95Hz\mvpa\searchlight\perf_pseudotrials_equalnum_x2_trainfold_only_comp';
+% comp = [0.03 0.15; 0.15 0.56; 0.56 0.74];
+% adi_searchlight_leave_out_exemplar_singlsubj_ohne_pca(path2subjects, subjects_dir, filename, balldesign, comp, neighbours)
+
+% 17.01.2020: searchlight analyse für Zeitpunkt der höchsten mittleren
+% Klassifikationsleistung (analog zu Dima et al.)
+balldesign = {'gbf'; 'gbs'; 'gbv'; 'ggf'; 'ggs'; 'ggv'; 'rwf'; 'rws'; 'rwv'};
+filename = 'MEG_analysis\noisereduced\1_95Hz\mvpa\searchlight\perf_pseudotrials_equalnum_x2_trainfold_only_time_86ms';
+time = [0.08 0.09]; %0.08594
+adi_searchlight_leave_out_exemplar_singlsubj_ohne_pca(path2subjects, subjects_dir, filename, balldesign, time, neighbours)
+
+%% additional searchlight analysis per run:
+clear
+subjectdir{1} = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\nl_adi_12\MEG_analysis\noisereduced\1_95Hz\02_interpolated\run_3\';
+subjectdir{2} = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\nl_adi_15\MEG_analysis\noisereduced\1_95Hz\02_interpolated\run_3\';
+subjectdir{3} = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\nl_adi_20\MEG_analysis\noisereduced\1_95Hz\02_interpolated\run_3\';
+subjectdir{4} = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\nl_adi_23\MEG_analysis\noisereduced\1_95Hz\02_interpolated\run_2\';
+balldesign = {'gbf'; 'gbs'; 'gbv'; 'ggf'; 'rwv'; 'rws'; 'rwf'; 'ggs'; 'ggv'};
+load('U:\My Documents\MATLAB\Bibliotheken\fieldtrip-20190419\template\neighbours\bti248_neighb.mat')
+filename = 'MEG_analysis\noisereduced\1_95Hz\mvpa\searchlight\perf_pseudotrials_equalnum_x2_trainfold_only_comp';
+% comp1 = [0.03 0.15];
+% adi_searchlight_leave_out_exemplar_singlsubj_additional_runs(subjectdir, filename, balldesign, comp1, neighbours)
+% comp2 = [0.15 0.56];
+% adi_searchlight_leave_out_exemplar_singlsubj_additional_runs(subjectdir, filename, balldesign, comp2, neighbours)
+comp3 = [0.56 0.74];
+adi_searchlight_leave_out_exemplar_singlsubj_additional_runs(subjectdir, filename, balldesign, comp3, neighbours)
+
+%% searchlight - mean accuracy values accross participants
+% wichtig: gewichtetes mittel erstellen, je nachdem, wie viele runs Proband
+% hat
+clear
+path2subjects = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+subjects_dir = dir(path2subjects);
+subjects_dir(1:2,:) = [];
+path2data = 'MEG_analysis\noisereduced\1_95Hz\mvpa\searchlight';
+% comp1 = [0.03 0.15];
+% filename = 'perf_pseudotrials_equalnum_x2_trainfold_only_comp_0.03_0.15_ms.mat';
+% adi_searchlight_accuracies_across_subj(subjects_dir, path2data, filename, comp1)
+% 
+% comp2 = [0.15 0.56];
+% filename = 'perf_pseudotrials_equalnum_x2_trainfold_only_comp_0.15_0.56_ms.mat';
+% adi_searchlight_accuracies_across_subj(subjects_dir, path2data, filename, comp2)
+% 
+% comp3 = [0.56 0.74];
+% filename = 'perf_pseudotrials_equalnum_x2_trainfold_only_comp_0.56_0.74_ms.mat';
+% adi_searchlight_accuracies_across_subj(subjects_dir, path2data, filename, comp3)
+
+filename = 'perf_pseudotrials_equalnum_x2_trainfold_only_time_86ms_0.08_0.09_ms.mat';
+time = [0.08 0.09]; %0.08594
+adi_searchlight_accuracies_across_subj(subjects_dir, path2data, filename, time)
+
+
+%% am Montag: ist mean classification performance across subjects von Favorit nr. 1 besser als von anderen bällen?
+% Problem: Klassifikator kann am Favoriten pro Proband nicht lernen, da er komplett im
+% Testset ist: evtl. Frage an Stefan; evtl. ausprobieren und noch andere
+% Möglichkeit überprüfen ==> evlt. classification across trials? 
+
+%% MVPA: features anhand der searchlight Ergebnisse (16.11.19)
+clear
+channelselection = {'A45'; 'A46'; 'A47'; 'A48'; 'A49'; 'A50'; 'A51'; 'A52'; 'A53';....
+    'A70'; 'A71'; 'A72'; 'A73'; 'A74'; 'A75'; 'A76'; 'A77'; 'A78'; 'A79'; 'A80';  ...
+    'A99'; 'A100'; 'A101'; 'A102'; 'A103'; 'A104'; 'A105'; 'A106'; 'A107'; 'A108'; 'A109'; 'A110'; 'A111'; ...
+    'A131'; 'A132'; 'A133'; 'A134'; 'A135'; 'A136'; 'A137'; 'A138'; 'A139'; 'A140'; 'A141'; 'A142'; 'A143'; ...
+    'A159'; 'A160'; 'A161'; 'A162'; 'A163'; 'A164'; 'A165'; 'A166'; 'A167'; 'A168'; 'A169'; 'A170'; ...
+    'A180'; 'A181'; 'A182'; 'A183'; 'A184'; 'A185'; 'A186'; 'A187'; 'A188'; 'A189'; 'A190'; 'A191'; 'A192'; ...
+     'A214'; 'A215'; 'A216'; 'A217'; 'A218'; 'A219'; 'A220'; 'A221'; 'A222'; 'A223'; 'A224'; 'A225'; 'A226'; ...
+     'A234';  'A235';  'A236';  'A237';  'A238';  'A239';  'A240';  'A241';  'A242';  'A243'; 'A244'};
+ 
+path2subjects = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+
+subjects_dir = dir(path2subjects);
+subjects_dir(1:2,:) = [];
+balldesign = {'gbf'; 'gbs'; 'gbv'; 'ggf'; 'ggs'; 'ggv'; 'rwf'; 'rws'; 'rwv'};
+% adi_leave_out_exemplar_singlsubj(path2subjects, subjects_dir, balldesign)
+adi_leave_out_exemplar_singlsubj_channelselection(path2subjects, subjects_dir, balldesign, channelselection)
+  
+  %% mvpa based on searchlight analysis - mean for subjects (18.11.19)
+% includes calculation of MCC, Sensitivity, False Alarm rate (not done yet)
+% includes calculation of weighted mean and weighted CI and figures
+clear
+path2subjects = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+subjects_dir = dir(path2subjects);
+subjects_dir(1:2,:) = [];
+% path2file = ['MEG_analysis\noisereduced\1_95Hz\mvpa\perf_without_pca_bootstrap_pseudotrials_trainfold_only.mat'];
+path2file = ['MEG_analysis\noisereduced\1_95Hz\mvpa\searchlight\mvpa_temp_occ\perf_bootstrap_pseudotrials_trainfold_only_1xnum_trials_temp_occ..mat'];
+adi_leave_out_exemplar_mean_subj_chansel(subjects_dir, path2file)
+
+
+%% test for significance of accuracy values: perf_without_pca_bootstrap_pseudotrials_trainfold_only - mean per subject
+%  with feature reduction
+% Created: 16.01.2020
+% noch nicht fertig
+
+clear
+path2subjects = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+subjects_dir = dir(path2subjects);
+subjects_dir(1:2,:) = [];
+subjects_dir([1 17 19 26],:) = []; % delete these subjects from directory as they only have 1 run and thus too few trials
+balldesign = {'gbf';'gbs';'gbv';'ggf';'ggs';'ggv';'rwf';'rws';'rwv'};
+path2file = ['MEG_analysis\noisereduced\1_95Hz\mvpa\searchlight\mvpa_temp_occ\perf_bootstrap_pseudotrials_trainfold_only_1xnum_trials_temp_occ..mat'];
+
+adi_mvpa_accuracy_significance_test(subjects_dir, path2file, balldesign)
+
+
+
+%% crossvalidation leave out one exemplar (ball design) per subject with or without feature reduction:
+% created: 24.7.19
+ 
+clear
+path2subjects = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+
+subjects_dir = dir(path2subjects);
+subjects_dir(1:2,:) = [];
+balldesign = {'gbf'; 'gbs'; 'gbv'; 'ggf'; 'ggs'; 'ggv'; 'rwf'; 'rws'; 'rwv'};
+% adi_leave_out_exemplar_singlsubj(path2subjects, subjects_dir, balldesign)
+adi_leave_out_exemplar_singlsubj_ohne_pca(path2subjects, subjects_dir, balldesign)
+
+
+ 
+ %% perf_without_pca_bootstrap_pseudotrials_trainfold_only - mean for subjects
+% für regression
+clear
+path2subjects = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+subjects_dir = dir(path2subjects);
+subjects_dir(1:2,:) = [];
+% path2file = ['MEG_analysis\noisereduced\1_95Hz\mvpa\perf_without_pca_bootstrap_pseudotrials_trainfold_only.mat'];
+path2file = ['MEG_analysis\noisereduced\1_95Hz\mvpa\perf_without_pca_bootstrap_pseudotrials_trainfold_only_2xnum_trials.mat'];
+adi_leave_out_exemplar_mean_subj(subjects_dir, path2file)
+
+%% permutationstests for significance testing:
+% calculating dprime and balanced accuracy
+% 
+% created: 21.01.2020 
+
+clear
+path2subjects = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+subjects_dir = dir(path2subjects);
+subjects_dir(1:3,:) = [];
+balldesign = {'gbf'; 'gbs'; 'gbv'; 'ggf'; 'ggs'; 'ggv'; 'rwf'; 'rws'; 'rwv'};
+% peaktime = 0.086; % peak
+timerange = [0.03 0.74];
+rng_ = rng(22011980); % Aussage von Stefan: direkt vor Publikation noch einmal durchrechnen;
+adi_permutation_leave_out_exemplar_singlsubj(subjects_dir, balldesign, timerange)
+
+balldesign = {'gbf'; 'gbs'; 'gbv'; 'ggf'; 'ggs'; 'ggv'; 'rwf'; 'rws'; 'rwv'};
+path2subjects = 'E:\adidas\fieldtrip_Auswertung\single_subjects\';
+subjects_dir = dir(path2subjects);
+subjects_dir([1:3, 7],:) = [];
+timerange = [0.03 0.74];
+adi_permutation_compute_exact_p_values(subjects_dir, balldesign, timerange)
+
+for kk = 9:length(balldesign)
+    
+adi_permutation_compute_exact_p_values(subjects_dir, balldesign(kk), timerange)
+    
+end
+% 
+% 
+% clear
+% path2subjects = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+% subjects_dir = dir(path2subjects);
+% subjects_dir([1 17 19 26],:) = []; % delete these subjects from directory as they only have 1 run and thus too few trials
+% balldesign = {'gbf';'gbs';'gbv';'ggf';'ggs';'ggv';'rwf';'rws';'rwv'};
+% path2file = ['MEG_analysis\noisereduced\1_95Hz\mvpa\searchlight\mvpa_temp_occ\perf_bootstrap_pseudotrials_trainfold_only_1xnum_trials_temp_occ..mat'];
+% adi_mvpa_permutation_significance_test(subjects_dir, path2file, balldesign)
+% 
+
+
+%% check permutation test in perstimulus interval
+% 6.2.2020
+clear
+path2subjects = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+subjects_dir = dir(path2subjects);
+subjects_dir(1:3,:) = [];
+timerange = [-0.5 0];
+rng_ = rng(22011980); % Aussage von Stefan: direkt vor Publikation noch einmal durchrechnen;
+balldesign = {'gbs'};
+adi_permutation_leave_out_exemplar_singlsubj_prestim(subjects_dir, balldesign, timerange)
+
+balldesign = {'gbs'};
+path2subjects = 'E:\adidas\fieldtrip_Auswertung\single_subjects\';
+subjects_dir = dir(path2subjects);
+subjects_dir([1:3, 7],:) = [];    
+timerange = [-0.05 0];
+file = 'significance_prestim/performance_permutation_null_distribution_gbs_prestim.mat';
+adi_permutation_compute_exact_p_values(subjects_dir, balldesign, timerange, file)
+   
+%% Fragestellung: Hängt performance im prestim interval unter chance mit geringerer Größe des Testets zusammen ?
+% Korrelation zwischen mittlerer Höhe der Accuracy-Werte pro Proband (im
+% prestim Intervall) und Anzahl der trials im testset?
+% created 7.2.20
+% balldesign = {'gbf'; 'gbs'; 'gbv'; 'ggf'; 'ggs'; 'ggv'; 'rwf'; 'rws'; 'rwv'};
+balldesign = {'soccer'; 'space'; 'volley'};
+path2subjects = 'E:\adidas\fieldtrip_Auswertung\single_subjects\';
+path2file = 'MEG\mvpa\significance_testing\leave_design_out\';
+subjects_dir = dir(path2subjects);
+subjects_dir([1:3, 7],:) = [];
+
+adi_check_number_trials_testset(subjects_dir, balldesign, path2file)
+
+%% permutationstests for significance testing: leave one design out ( space versus volley versus soccer ball)
+% calculating dprime and balanced accuracy
+% created: 07.02.2020 
+
+clear
+path2subjects = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+subjects_dir = dir(path2subjects);
+subjects_dir(1:3,:) = [];
+balldesign = {'gbf'; 'gbs'; 'gbv'; 'ggf'; 'ggs'; 'ggv'; 'rwf'; 'rws'; 'rwv'};
+timerange = [0.03 0.74];
+rng_ = rng(30051971); % Aussage von Stefan: direkt vor Publikation noch einmal durchrechnen;
+adi_permutation_leave_out_design_singlsubj(subjects_dir, balldesign, timerange)
+
+mainpath = 'E:\adidas\fieldtrip_Auswertung\single_subjects\';
+subjects_dir = dir(mainpath);
+subjects_dir([1:3, 7],:) = [];
+path2files = '\MEG\mvpa\significance_testing\leave_design_out\';
+design = {'soccer', 'space', 'volley'};
+adi_permutation_compute_exact_p_values_design(subjects_dir, design, timerange, path2files)
+
+timerange = [0.03 0.74];
+for kk = 3:length(design)
+    
+adi_permutation_compute_exact_p_values_design(subjects_dir, design(kk), timerange, path2files)
+    
+end
+% 
+
+%% check rwf versus non-rwf on group level  (leave one subject out) 
+%18.02.2020: hier weitermachen 
+clear
+rng_ = rng(2335927); 
+timerange = [0.03 0.74];
+path2subjects = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+subjects_dir = dir(path2subjects);
+subjects_dir(1:3,:) = [];
+balldesign = 'rwf';
+tic
+adi_mvpa_rwf_versus_rest(subjects_dir, balldesign, timerange)
+toc
+% session_all_subj_1 = struct('trial', session_all_subj.trial(1:2000), 'time', session_all_subj.time(1:2000), 'subject', ...
+%     session_all_subj.subject(1:2000), 'condition_rwf', session_all_subj.condition_rwf(1:2000), 'label_rwf', ...
+%     session_all_subj.label_rwf(1:2000), 'label', session_all_subj.label, 'fsample', session_all_subj.fsample, 'dimord', [])
+
+
+%% regression: welche Faktoren führen zu einer guten oder schlechten Klassifikationsleistung?
+% siehe excel-tabelle für eingangsdaten
+% filename = 'list_regression_ohne_04.mat';
+
+% Unterschiedliche Maßstäbe für unterschiedliche Favoriten:
+% 
+% Favorit 1: bis 5% dislike/dontcare = congruent, bis 25% dislike/dontcare = partly congruent, unter 75% likes = incongruent;
+% Favorit 2: bis 10%  dislike/dontcare = congruent, bis 25% dislike/dontcare = partly congruent, unter 75% likes = incongruent;
+% Favorit 3: bis 15%  dislike/dontcare = congruent, bis 25% dislike/dontcare = partly congruent, unter 75% likes = incongruent;
+% Favorit 4: bis 20%  dislike/dontcare = congruent, bis 25% dislike/dontcare = partly congruent, unter 75% likes = incongruent;
+% Unpreferred: , unter 25% likes = congruent,  bis 75%  like = incongruent, zw. 25-75% like = partly congruent;
+
+
+
+filename = 'list_regression_favorites.mat';
+path = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\group_analysis\';
+adi_anova(path, filename)
+adi_anova2
+
+% import kongruenz_favoriten_ratings.txt
+
+congr.subject = repmat(congruency.subject, 4, 1);
+congr.fav = [congruency.fav_no1; congruency.fav_no2; congruency.fav_no3; congruency.fav_no4];
+congr.con = [congruency.Fav1_rating; congruency.Fav2_rating; congruency.Fav3_rating; congruency.Fav4_rating];
+
+tabl_congr = table(congr.subject, congr.fav, congr.con, 'VariableNames', {'subject', 'fav_ball', 'rating'});
+
+
+balldesign = [];
+balldesign.unique = {'gbf'; 'gbs'; 'gbv'; 'ggf';  'ggs'; 'ggv'; 'rwf'; 'rws'; 'rwv'};
+balldesign.repetition = sort(repmat(balldesign.unique, length(congruency.subject), 1));
+balldesign.congruency = cell(length(balldesign.repetition), 1);
+balldesign.subject = repmat(congruency.subject, 9, 1);
+
+
+for kk = 1:length(congr.fav)
+    congr.fav(kk)
+    congr.subject(kk)
+     congr.con(kk)
+    for ii = 1:length(balldesign.repetition)
+        if 1 == strcmp(balldesign.repetition{ii}, char(congr.fav(kk))) && 1 == strcmp(balldesign.subject{ii}, char(congr.subject(kk))) 
+            balldesign.ratings_during_recording{ii,1} = char(congr.con(kk));
+            balldesign.rated_as_favorite{ii,1} = 'preferred';
+        end
+    end
+end
+
+for ii = 1:length(balldesign.congruency)
+        if 1 == isempty(balldesign.rated_as_favorite{ii})
+            balldesign.rated_as_favorite{ii} = 'unpreferred';
+        end
+end
+tbl = table(balldesign.subject, balldesign.repetition, balldesign.rated_as_favorite, balldesign.ratings_during_recording);
+
+for ii = 1:length(balldesign.congruency)
+       switch balldesign.congruency{ii}
+           case 'like'
+               balldesign.congruency_2{ii,1} = 'congruent';
+           case 'dislike'
+               balldesign.congruency_2{ii,1} = 'incongruent';
+           case 'like/dislike'
+               balldesign.congruency_2{ii,1} = 'partially_incongruent';
+           case 'unpreferred'
+               balldesign.congruency_2{ii,1} = 'unknown';
+       end
+end
+
+subject_rep = repmat(congruency.subject, 9,1);
+balldesign.fav_color = cell(length(subject_rep),1);
+
+for ii = 1:length(subject_rep)
+    
+    subject_i = subject_rep(ii);
+    
+    for kk = 1:length(favcolor)
+        if 1 == strcmp(congruency.subject(kk), subject_i)
+            fav_subj = favcolor(kk);
+            if 1 == strcmp(fav_subj, favcolor252(ii))
+                balldesign.fav_color{ii} = 'congruent';
+            else 
+                balldesign.fav_color{ii} = 'incongruent';
+            end
+            
+        end
+    end
+end
+
+balldesign.fav_pattern = cell(length(subject_rep),1);
+for ii = 1:length(subject_rep)
+    
+    subject_i = subject_rep(ii);
+    
+    for kk = 1:length(favpattern)
+        if 1 == strcmp(congruency.subject(kk), subject_i)
+            fav_subj = favpattern(kk);
+            if 1 == strcmp(fav_subj, favpattern252(ii))
+                balldesign.fav_pattern{ii} = 'congruent';
+            else 
+                balldesign.fav_pattern{ii} = 'incongruent';
+            end
+            
+        end
+    end
+end
+
+
+
+
+%% 11.10.2019: sensordaten für einzelne Bälle zusammenfassen ohne Verknüpfungsregeln
+
+clear
+balldesign = {'gbv', 'rws', 'rwf', 'ggv', 'gbs', 'gbf', 'rwv', 'ggs', 'ggf'}; 
+path2subj = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
+subject_list = dir (path2subj);
+subject_list([1 2],:) = [];
+freq = 'bp1_45Hz';
+
+
+for jj = 1%:length(balldesign)
+    sensordata_all_subj = struct('trial', [], 'time', [], 'response_label', [], 'balldesign_short', [], 'run', [], 'subject', [],'label', [], 'fsample', [] ,'grad', [], 'cfg', [], 'trl_no', []);
+
+    for ii = 1:length(subject_list)
+        path2sensordata = ['W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\' subject_list(ii).name '\MEG_analysis\noisereduced\1_95Hz\02_interpolated\' ];
+        [sensordata_all_subj] = adi_single_ball_sensordata(sensordata_all_subj, path2sensordata, subject_list(ii).name, [], [], freq, balldesign{jj}, [], ii);
+    end
+
+    [sensordata_all_subj_int] = adi_additionalMEG_interpolation(sensordata_all_subj, []);
+
+    % z-transformation:
+    [sensordata_all_subj_zscore] = adi_ztrans_sensorspace(sensordata_all_subj_int);
+    clear sensordata_all_subj_int
+
+    session = sensordata_all_subj_zscore(1);
+       for kk = 2:length(sensordata_all_subj_zscore)
+           session.trial = cat(2,session.trial, sensordata_all_subj_zscore(kk).trial);
+           session.time = cat(2,session.time, sensordata_all_subj_zscore(kk).time);
+           session.response_label = cat(2,session.response_label, sensordata_all_subj_zscore(kk).response_label);
+           session.balldesign_short = cat(2,session.balldesign_short, sensordata_all_subj_zscore(kk).balldesign_short);
+           session.subject = cat(2,session.subject, sensordata_all_subj_zscore(kk).subject);
+           session.run = cat(2,session.run, sensordata_all_subj_zscore(kk).run);
+           session.trl_no = cat(2,session.trl_no, sensordata_all_subj_zscore(kk).trl_no);
+       end
+
+
+    for kk = 1:length(session.response_label)
+        switch session.response_label{kk}
+            case 'like' % 'Volley'
+                session.labels(kk) = 1;
+            case 'Neu_Like' % 'Volley'
+                session.labels(kk) = 1;
+            case 'dislike' % 'Space'
+                session.labels(kk) = 2;
+            case 'Neu_Dislike' % 'Space'
+                session.labels(kk) = 2;
+            case 'dontcare'
+                session.labels(kk) = 3;
+        end
+    end
+
+    save(['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data_ab_11-10-2019\' balldesign{jj} '_sensordata_all_subj_zscore.mat'], 'session')
+    clear sensordata_all_subj sensordata_all_subj_zscore session
+
+    
+end
+
+%% 11.10. (modifiziert vom Juli 2019) -  crossvalidation out leave 1 subject with feature reduction:
+clear
+balldesign = {'gbf'; 'gbv'; 'ggf'; 'rwv'; 'rws'; 'rwf'; 'ggs'; 'ggv'; 'gbs'}; % gbs rausgenommen, da nur 34 trials in Bedingung like
+
+for pp = 1:length(balldesign)
+    fn_input = 'sensordata_all_subj_zscore.mat';
+    input_path = (['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\']);
+    fn2save = 'result_feature_red.mat';
+    path2save = (['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\MVPA\holdout_subj\feature_reduction\']);
+    config = [];
+    config.balance = 'undersample';
+    adi_mvpa_sensorspace_cv_leave_subj_out(balldesign{pp}, fn_input, input_path, fn2save, path2save, config) 
+    
+end
+    
 
 %% export warped anatomy:
 clear
@@ -244,62 +730,7 @@ for i = 26%:length(ListSubj)
    
 end
 
-%% 30.7.2019: sensordaten für einzelne Bälle zusammenfassen ohne Verknüpfungsregeln
-
-clear
-balldesign = {'gbv', 'rws', 'rwf', 'ggv', 'gbs', 'gbf', 'rwv', 'ggs', 'ggf'}; 
-path2subj = 'W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\';
-subject_list = dir (path2subj);
-subject_list([1 2],:) = [];
-freq = 'bp1_45Hz';
-
-
-for jj = 1:length(balldesign)
-    sensordata_all_subj = struct('trial', [], 'time', [], 'response_label', [], 'balldesign_short', [], 'run', [], 'subject', [],'label', [], 'fsample', [] ,'grad', [], 'cfg', [], 'trl_no', []);
-
-    for ii=1:length(subject_list)
-        path2sensordata = ['W:\neurochirurgie\science\Kirsten\adidas\fieldtrip_Auswertung\Studie_1_visuell\single_subjects\' subject_list(ii).name '\MEG_analysis\noisereduced\1_95Hz\02_interpolated\' ];
-        [sensordata_all_subj] = adi_single_ball_sensordata(sensordata_all_subj, path2sensordata, subject_list(ii).name, [], [], freq, balldesign{jj}, [], ii);
-    end
-
-    [sensordata_all_subj_int] = adi_additionalMEG_interpolation(sensordata_all_subj, []);
-
-    % z-transformation:
-    [sensordata_all_subj_zscore] = adi_ztrans_sensorspace(sensordata_all_subj_int);
-    clear sensordata_all_subj_int
-
-    session = sensordata_all_subj_zscore(1);
-       for k = 2:length(sensordata_all_subj_zscore)
-           session.trial = cat(2,session.trial, sensordata_all_subj_zscore(k).trial);
-           session.time = cat(2,session.time, sensordata_all_subj_zscore(k).time);
-           session.response_label = cat(2,session.response_label, sensordata_all_subj_zscore(k).response_label);
-           session.balldesign_short = cat(2,session.balldesign_short, sensordata_all_subj_zscore(k).balldesign_short);
-           session.subject = cat(2,session.subject, sensordata_all_subj_zscore(k).subject);
-           session.run = cat(2,session.run, sensordata_all_subj_zscore(k).run);
-           session.trl_no = cat(2,session.trl_no, sensordata_all_subj_zscore(k).trl_no);
-       end
-
-
-    for k=1:length(session.response_label)
-        switch session.response_label{k}
-            case 'like' % 'Volley'
-                session.labels(k) = 1;
-            case 'Neu_Like' % 'Volley'
-                session.labels(k) = 1;
-            case 'dislike' % 'Space'
-                session.labels(k) = 2;
-            case 'Neu_Dislike' % 'Space'
-                session.labels(k) = 2;
-            case 'dontcare'
-                session.labels(k) = 3;
-        end
-    end
-
-    save(['\\141.67.74.59\data\Adidas\sensordata_all_available_trials\' 'session_' balldesign{jj} 'all_trls.mat'], 'session')
-    clear sensordata_all_subj sensordata_all_subj_zscore session
-
-    
-end
+%%
 
 %% 29.5.2019: sensordaten für einzelne Bälle zusammenfassen mit neuen Verknüpfungsregeln
 
@@ -413,7 +844,7 @@ adi_mvpa_sensorspace_logreg_train_and_test(added_data.like_training, added_data.
 
 %% 29.5.19 compute lda, logreg crossvalidate:
 
-cfg = [];
+cfg=[];
 like = ft_appenddata(cfg, added_data.like_training, initial_data.like_cv);
 dislike =  ft_appenddata(cfg, added_data.dislike_training, initial_data.dislike_cv);
 
@@ -433,7 +864,7 @@ clear
 balldesign = {'gbf'; 'gbv'; 'ggf'; 'rwv'; 'rws'; 'rwf'; 'gbs'; 'ggs'; 'ggv'};
 
 
-for pp = 2%:length(balldesign)
+for pp = 9:length(balldesign)
     load (['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\sensordata_all_subj_zscore.mat'])
     path2save = (['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\MVPA\5foldCV\']);
     if ~exist(path2save, 'dir')
@@ -467,41 +898,16 @@ for pp = 2%:length(balldesign)
     adi_mvpa_sensorspace(like, dislike, path2save, [])
     
 end
-%% 2.7.19 fehler entdeckt: adi_04 hat andere labelsortierung ==> angleichen an andere:
+
+%% 17.6. crossvalidation leave two subjects out:
 clear
-balldesign = {'gbv'; 'rwv'; 'rws'; 'rwf'; 'gbs'};
+balldesign = {'ggf'; 'rwv'; 'rws'; 'rwf'; 'gbs'; 'gbv'; 'ggs'; 'ggv'};
 
-for pp = 4%:length(balldesign)
-    load (['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\sensordata_all_subj_zscore.mat'])
-    chan_indx = zeros(length(sensordata_all_subj_zscore(1).label),1);
-    if 1 == strcmp(sensordata_all_subj_zscore(1).subject{1}, 'nl_adi_04')
-        for kk = 1:length(sensordata_all_subj_zscore(1).label)
-            chan_indx(kk) = find(strcmp(sensordata_all_subj_zscore(2).label{kk}, sensordata_all_subj_zscore(1).label));
-        end
-        for kk = 1:length(sensordata_all_subj_zscore(1).trial)
-             trials{kk} = sensordata_all_subj_zscore(1).trial{kk}(chan_indx,:);
-        end
-        sensordata_all_subj_zscore(1).trial = trials;
-        sensordata_all_subj_zscore(1).label = sensordata_all_subj_zscore(2).label;
-    end
-end
-
-
-%% searchlight: 2.7.19
-clear
-balldesign = {'gbf'; 'gbv'; 'ggf'; 'rwv'; 'rws'; 'rwf'; 'gbs'; 'ggs'; 'ggv'};
-
-
-for pp = 7%:length(balldesign)
+for pp = 5:length(balldesign)
 
     load (['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\sensordata_all_subj_zscore.mat'])
-    if ~exist(['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\MVPA\searchlight'], 'dir')
-        mkdir(['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\MVPA\searchlight'])
-    end
-    path2save = (['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\MVPA\searchlight\undersampled_data\']);
-    if ~exist(path2save, 'dir')
-        mkdir(path2save)
-    end
+    path2save = (['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\MVPA\holdout_subj\']);
+
     session = sensordata_all_subj_zscore(1);
        for k = 2:length(sensordata_all_subj_zscore)
            session.trial = cat(2,session.trial, sensordata_all_subj_zscore(k).trial);
@@ -524,129 +930,11 @@ for pp = 7%:length(balldesign)
                 session.labels(k) = 2;
         end
     end
-    
     clear sensordata_all_subj_zscore
-    [like, dislike] = split_data(session, 'like_dislike');
-    
-    clear session
-    
-%     comp1 = [0.05 0.15];
-%     adi_mvpa_searchlight_sensorspace(like, dislike, comp1, path2save, balldesign{pp}) 
-%     comp2 = [0.15 0.5];
-%     adi_mvpa_searchlight_sensorspace(like, dislike, comp2, path2save, balldesign{pp}) 
-%     comp3 = [0.5 0.8];
-%     adi_mvpa_searchlight_sensorspace(like, dislike, comp3, path2save, balldesign{pp}) 
-%     comp = [-0.5 -0.2];
-%     adi_mvpa_searchlight_sensorspace(like, dislike, comp, path2save, balldesign{pp})    
-    comp = [-0.5 0];
-    adi_mvpa_searchlight_sensorspace(like, dislike, comp, path2save, balldesign{pp})     
-    
+
+    adi_mvpa_sensorspace_cv_leave_subj_out(session, path2save) 
+
 end
-
-
-
-    
-% for p = 1:length(session.trial)
-%     temp = session.trial{1,p};
-%     session.data(p,:,:) = temp;
-%     clear temp
-% end
-%    session = rmfield(session, 'trial');
-
-% %
-% [session_sorted] = regroup_session(session);
-% adi_sanity_check_sensorspace(session)
-% adi_stats_sensorspace(session) % hier noch vervollstänidgen
-% % 
-% group_path = ['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\svm\' balldesign filesep];
-% SVM_Guggenmos_adapted (session, group_path, freq)
-% % % SVM_Guggenmos_virtsens (session, group_path, freq)
-
-%% searchlight: leave two subjects out ==> funktioniert noch nicht
-
-clear
-balldesign = {'gbf'; 'gbv'; 'ggf'; 'rwv'; 'rws'; 'rwf'; 'gbs'; 'ggs'; 'ggv'};
-
-for pp = 1:length(balldesign)
-
-    load (['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\sensordata_all_subj_zscore.mat'])
-    if ~exist(['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\MVPA\searchlight'], 'dir')
-        mkdir(['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\MVPA\searchlight'])
-    end
-    path2save = (['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\MVPA\searchlight\undersampled_data\holdout_subj\']);
-    if ~exist(path2save, 'dir')
-        mkdir(path2save)
-    end
-    session = sensordata_all_subj_zscore(1);
-       for k = 2:length(sensordata_all_subj_zscore)
-           session.trial = cat(2,session.trial, sensordata_all_subj_zscore(k).trial);
-           session.time = cat(2,session.time, sensordata_all_subj_zscore(k).time);
-           session.response_label = cat(2,session.response_label, sensordata_all_subj_zscore(k).response_label);
-           session.balldesign_short = cat(2,session.balldesign_short, sensordata_all_subj_zscore(k).balldesign_short);
-           session.subject = cat(2,session.subject, sensordata_all_subj_zscore(k).subject);
-       end
-
-    for k=1:length(session.response_label)
-        switch session.response_label{k}
-            case 'like' % 'Volley'
-                session.labels(k) = 1;
-            case 'Neu_Like' % 'Volley'
-                session.labels(k) = 1;
-            case 'dislike' % 'Space'
-                session.labels(k) = 2;
-            case 'Neu_Dislike' % 'Space'
-                session.labels(k) = 2;
-        end
-    end
-   
-    clear sensordata_all_subj_zscore
-    [like, dislike] = split_data(session, 'like_dislike');
-    data_like = like;
-    data_like.trial = zeros(length(like.trial), size(like.trial{1},1), size(like.trial{1},2));
-    data_dislike = dislike; 
-    data_dislike.trial = zeros(length(dislike.trial), size(dislike.trial{1},1), size(dislike.trial{1},2));
-    for k=1:length(like.trial)
-        data_like.trial(k,:,:) = like.trial{k};
-    end
-    for k=1:length(dislike.trial)
-        data_dislike.trial(k,:,:) = dislike.trial{k};
-    end
-    clear like dislike
-    
-    clear session
-    
-    comp1 = [0.05 0.15];
-    adi_mvpa_searchlight_sensorspace_holdout_subj(data_like, data_dislike, comp1, path2save, balldesign{pp}) 
-    comp2 = [0.15 0.5];
-    adi_mvpa_searchlight_sensorspace_holdout_subj(data_like, data_dislike, comp2, path2save, balldesign{pp}) 
-    comp3 = [0.5 0.8];
-    adi_mvpa_searchlight_sensorspace_holdout_subj(data_like, data_dislike, comp3, path2save, balldesign{pp})  
-    comp = [-0.5 -0.2];
-    adi_mvpa_searchlight_sensorspace_holdout_subj(data_like, data_dislike, comp, path2save, balldesign{pp})     
-    
-end
-
-%% 4.7. crossvalidation out leave two subjects with feature reduction:
-clear
-balldesign = {'gbf'; 'gbv'; 'ggf'; 'rwv'; 'rws'; 'rwf'; 'ggs'; 'ggv'; 'gbs'}; % gbs rausgenommen, da nur 34 trials in Bedingung like
-
-for pp = 2:length(balldesign)
-    fn_input = 'sensordata_all_subj_zscore.mat';
-    input_path = (['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\']);
-    fn2save = 'result_feature_red.mat';
-    path2save = (['E:\adidas\fieldtrip_Auswertung\group_analysis\sensor_space\new_data\' balldesign{pp} '_ball\zscore\MVPA\holdout_subj\feature_reduction\']);
-    config = [];
-    config.balance = 'undersample';
-    adi_mvpa_sensorspace_cv_leave_subj_out(balldesign{pp}, fn_input, input_path, fn2save, path2save, config) 
-    
-end
-    
-   
-
-%% 
-
-
-
 
 %% compute lcmv Beamformer and virtual sensors for each subject- 
 % anderes Zeitintervall für Covariance!!
@@ -927,7 +1215,7 @@ trigger.triggerchannel  = [102, 104, 106, 108, 4196, 4198, 4200, 4202, 4204];
 trigger.eprime          = [102, 104, 106, 108, 101, 103, 105, 107, 109];
 
 balldesign = 'ggs';
-delete_subjects = {'nl_adi_20'; 'nl_adi_29'; 'nl_adi_34'}; 
+delete_subjects = {'nl_adi_20'; 'nl_adi_29'; 'nl_adi_34'};
 for i=1:length(subject_list)
     ind(i) = sum(strcmp (subject_list(i).name, delete_subjects));
 end

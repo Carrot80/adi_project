@@ -4,14 +4,13 @@ function adi_artifact_cleaningMEG(path2ft_data, bst_path, path2cleanfile, subjec
 
 %% Achtung: benutzt nicht infos, die in Datei "art_rej.mat" gespeichert sind (erstellt mittels "Auslesen_Der_artifakte.m")
 
-FileList = dir(fullfile([path2ft_data 'Neu*500*.mat']));
+FileList = dir(fullfile([path2ft_data 'Neu*ike50_*.mat']));
 
 for jj = 1:length (FileList) % 
     if ~exist ([path2cleanfile FileList(jj).name], 'file')
-        load ([FileList(jj).folder filesep FileList(jj).name], 'RetVal');
-        load ([bst_path subject filesep FileList(jj).name(1:end-4) filesep 'brainstormstudy.mat'])
-        ft_data = RetVal;
-        
+        load ([FileList(jj).folder filesep FileList(jj).name], 'ft_data');
+        load ([bst_path FileList(jj).name(1:end-4) filesep 'brainstormstudy.mat'])
+               
         if ~isempty(BadTrials)
             for ii = 1:length(BadTrials)
                 bad(ii) = str2num(BadTrials{ii,1}(end-6:end-4));
@@ -134,7 +133,6 @@ for jj = 1:length (FileList) %
         axis tight;
         title(['MEG_', FileList(jj).name(1:end-4)]);
         PathFigure = ([path2cleanfile, 'figures\after_cleaning\']);
-        
         if ~exist (PathFigure)
            mkdir(PathFigure)
         end 
@@ -143,7 +141,7 @@ for jj = 1:length (FileList) %
 
 
         save ([path2cleanfile FileList(jj).name], 'cleanMEG' )
-        clear cleanMEG ft_data RetVal  
+        clear cleanMEG ft_data   
      end
 end
 end

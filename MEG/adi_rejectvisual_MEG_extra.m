@@ -1,125 +1,199 @@
 
 
-function adi_rejectvisual_MEG_extra(path2cleanfile, path_interpolated, subject)
+function adi_rejectvisual_MEG_extra(path2cleanfile, subject)
+
 % Nachbereinigung
-    PathFigure_before_cleaning = [path2cleanfile, 'figures\before_cleaning\'];   
     PathFigure_after_cleaning = [path2cleanfile, 'figures\after_cleaning\'];   
 
     files   =   dir(fullfile(path2cleanfile, '*.mat'));
     size_files = size(files);
-    cfg = [];
-    cfg.method = 'summary';%'trial'% 'summary' %, 'trial'
-%     cfg.method = 'channel';
-    cfg.channel = 'MEG'; % MEG
-    cfg.keepchannel = 'nan';
-    cfg.latency = [-0.5 0];
-    cfg.megscale = 1;
-    cfg.eegscale = 5e-8;
-    cfg.interactive = 'yes';
-    cfg.alim     = 1e-12; 
-    cfg.keeptrial = 'yes';
-
     
-    for i = 1:(size_files(1,1))
+    for ii = 8:(size_files(1,1))
         
-        load ([files(i).folder, filesep, files(i).name], 'cleanMEG')
-        load([path_interpolated files(i).name], 'cleanMEG_interp')
-        cfgn                = [];
-        cfgn.parameter      = 'trial';
-        cfgn.keeptrials     = 'yes'; % classifiers operate on individual trials
-        cfgn.vartrllength   = 2;
+        load ([files(ii).folder, filesep, files(ii).name], 'cleanMEG')
         
-        
-        %% plot and save avg before cleaning:
-             
-        tcleanMEG2         = ft_timelockanalysis(cfgn,cleanMEG2);  
-        figure
-        plot(tcleanMEG2.time, squeeze(mean(tcleanMEG2.trial(:,1:248,:),1))) % MEG
-        axis tight
-        file            = files(i).name;
-        
-%         saveas (gcf, [PathFigure_before_cleaning, file(1:end-4)], 'fig') % save EEG after cleaning figure to directory 
-        
-        %% rejectvisual        
+        if ~isfield(cleanMEG, 'additional_cleaning')
+            cfgn                = [];
+            cfgn.parameter      = 'trial';
+            cfgn.keeptrials     = 'yes'; % classifiers operate on individual trials
+            cfgn.vartrllength   = 2;
 
-        trialinfo = cleanMEG.trialinfo;
-        
-        if ~isequal(length(cleanMEG.trial), 1)
-            [cleanMEG2]       = ft_rejectvisual(cfg, cleanMEG); 
-            cleanMEG.trialinfo = trialinfo;
-            for p = 1:length(cleanMEG.trial)
-                ind = find(isnan(cleanMEG.trial{p}(:,1)));
-                cleanMEG.ChannelFlag_Bst{p}(ind) =-1;
-                RetVal.ChannelFlag_Bst{p}(ind) =-1;
-            end
-            if ~isempty(cleanMEG.cfg.artfctdef.trial.artifact)
-                for p=1:length(cleanMEG.cfg.artfctdef.summary)
-                   ind(p) = find(cleanMEG.cfg.artfctdef.summary(p,1) == cleanMEG.sampleinfo(:,1));
-                end
-                cleanMEG.trial(find(ind))=[];
-                cleanMEG.time(find(ind))=[];
-                cleanMEG.sampleinfo(find(ind),:)=[];
-                cleanMEG.ChannelFlag_Bst(find(ind),:)=[];
-                cleanMEG.triggerchannel
-          
-                cleanMEGcleanMEG
-            end
-        elseif isequal(length(cleanMEG.trial), 1)
 
-            z_cleanMEG = zscore(cleanMEG.trial{1});
-            ind=zeros(1, size(z_cleanMEG,1));
+            %% plot and save avg before cleaning:
+
+            tcleanMEG         = ft_timelockanalysis(cfgn,cleanMEG);  
             figure
-            plot(tcleanMEG.time, z_cleanMEG) % MEG
-            for p=1:size(z_cleanMEG,1)
-               [temp] =  find(abs(z_cleanMEG(p,1000:2000)) >=5 );
-               if ~isempty(temp)
-                   ind(p)=sum(temp);
-               end
+            plot(tcleanMEG.time, squeeze(mean(tcleanMEG.trial(:,1:248,:),1))) % MEG
+            axis tight    
+
+            %% rejectvisual       
+         
+            
+             if 1 == strcmp(subject, 'nl_adi_20') && ~isfield(cleanMEG, 'additional_cleaning') 
+                 
+                bad_chan = {'A248'; 'A246'; 'A247'; 'A228'};
+                bad_chan_ind = [];
+                for kk = 1:length(bad_chan)
+                     bad_chan_ind(kk) = find(strcmp(cleanMEG.label, bad_chan{kk}));
+                end
+
+                for kk = 1:length(cleanMEG.trial)
+                    cleanMEG.trial{kk}(bad_chan_ind,:) = NaN;
+                end
+                cfg = [];
+                out_databrowser = ft_databrowser(cfg, cleanMEG); 
+                    
+             if 1 == strcmp(files(ii).name, 'Neu_Dislike500_2.mat')
+                    cleanMEG.trial([15, 20, 34, 35]) = [];
+                    cleanMEG.time([15, 20, 34, 35]) = [];
+                    cleanMEG.trialinfo.triggerchannel([15, 20, 34, 35],:) = [];
+                    cleanMEG.trialinfo.responsechannel([15, 20, 34, 35],:) = [];
+                    cleanMEG.trialinfo.triggerlabel([15, 20, 34, 35]) = [];
+                    cleanMEG.trialinfo.response([15, 20, 34, 35]) = [];
+                    cleanMEG.trialinfo.response_label([15, 20, 34, 35]) = [];
+                    cleanMEG.trialinfo.balldesign([15, 20, 34, 35]) = [];
+                    cleanMEG.trialinfo.balldesign_short([15, 20, 34, 35]) = [];
+             elseif  1 == strcmp(files(ii).name, 'Neu_Dislike500_4.mat')
+                    cleanMEG.trial([30]) = [];
+                    cleanMEG.time([30]) = [];
+                    cleanMEG.trialinfo.triggerchannel([30],:) = [];
+                    cleanMEG.trialinfo.responsechannel([30],:) = [];
+                    cleanMEG.trialinfo.triggerlabel([30]) = [];
+                    cleanMEG.trialinfo.response([30]) = [];
+                    cleanMEG.trialinfo.response_label([30]) = [];
+                    cleanMEG.trialinfo.balldesign([30]) = [];
+                    cleanMEG.trialinfo.balldesign_short([30]) = [];
+              elseif  1 == strcmp(files(ii).name, 'Neu_Like500_2.mat')
+                    cleanMEG.trial([11, 15, 17]) = [];
+                    cleanMEG.time([11, 15, 17]) = [];
+                    cleanMEG.trialinfo.triggerchannel([11, 15, 17],:) = [];
+                    cleanMEG.trialinfo.responsechannel([11, 15, 17],:) = [];
+                    cleanMEG.trialinfo.triggerlabel([11, 15, 17]) = [];
+                    cleanMEG.trialinfo.response([11, 15, 17]) = [];
+                    cleanMEG.trialinfo.response_label([11, 15, 17]) = [];
+                    cleanMEG.trialinfo.balldesign([11, 15, 17]) = [];
+                    cleanMEG.trialinfo.balldesign_short([11, 15, 17]) = [];
+                 
+             end
+                
+             end
+
+            if 1 == strcmp(subject, 'nl_adi_19') && ~isfield(cleanMEG, 'additional_cleaning') 
+                bad_chan = {'A248'};
+                bad_chan_ind = [];
+                for kk = 1:length(bad_chan)
+                     bad_chan_ind(kk) = find(strcmp(cleanMEG.label, bad_chan{kk}));
+                end
+
+                for kk = 1:length(cleanMEG.trial)
+                    cleanMEG.trial{kk}(bad_chan_ind,:) = NaN;
+                end
+                
+             if 1 == strcmp(files(ii).name, 'Neu_Dontcare500_1.mat')
+                    cleanMEG.trial(2) = [];
+                    cleanMEG.time(2) = [];
+                    cleanMEG.trialinfo.triggerchannel(2,:) = [];
+                    cleanMEG.trialinfo.responsechannel(2,:) = [];
+                    cleanMEG.trialinfo.triggerlabel(2) = [];
+                    cleanMEG.trialinfo.response(2) = [];
+                    cleanMEG.trialinfo.response_label(2) = [];
+                    cleanMEG.trialinfo.balldesign(2) = [];
+                    cleanMEG.trialinfo.balldesign_short(2) = [];
+             end
             end
-            badchan = find(ind);
-            cleanMEG.trial{1}(badchan,:)=NaN;
-            cleanMEG.trialinfo = trialinfo
+            
+            
+            if 1 == strcmp(subject, 'nl_adi_21') && ~isfield(cleanMEG, 'additional_cleaning') % entferne A22, A248 und A247
+                bad_chan = {'A22'; 'A212'; 'A246'; 'A247'; 'A248'; 'A231'; 'A228'};
+                bad_chan_ind = [];
+                for kk = 1:length(bad_chan)
+                     bad_chan_ind(kk) = find(strcmp(cleanMEG.label, bad_chan{kk}));
+                end
+
+                for kk = 1:length(cleanMEG.trial)
+                    cleanMEG.trial{kk}(bad_chan_ind,:) = NaN;
+                end
+                
+                cfg = [];
+                out_databrowser = ft_databrowser(cfg, cleanMEG);
+
+                
+                
+                if 1 == strcmp(files(ii).name, 'Neu_Dislike500_1.mat')
+                    cleanMEG.trial(5) = [];
+                    cleanMEG.time(5) = [];
+                    cleanMEG.trialinfo.triggerchannel(5,:) = [];
+                    cleanMEG.trialinfo.responsechannel(5,:) = [];
+                    cleanMEG.trialinfo.triggerlabel(5) = [];
+                    cleanMEG.trialinfo.response(5) = [];
+                    cleanMEG.trialinfo.response_label(5) = [];
+                    cleanMEG.trialinfo.balldesign(5) = [];
+                    cleanMEG.trialinfo.balldesign_short(5) = [];
+                elseif 1 == strcmp(files(ii).name, 'Neu_Dislike500_2.mat')
+                    cleanMEG.trial([3,10,11,12,13,20,22,25,26]) = [];
+                    cleanMEG.time([3,10,11,12,13,20,22,25,26]) = [];
+                    cleanMEG.trialinfo.triggerchannel([3,10,11,12,13,20,22,25,26],:) = [];
+                    cleanMEG.trialinfo.responsechannel([3,10,11,12,13,20,22,25,26],:) = [];
+                    cleanMEG.trialinfo.triggerlabel([3,10,11,12,13,20,22,25,26]) = [];
+                    cleanMEG.trialinfo.response([3,10,11,12,13,20,22,25,26]) = [];
+                    cleanMEG.trialinfo.response_label([3,10,11,12,13,20,22,25,26]) = [];
+                    cleanMEG.trialinfo.balldesign([3,10,11,12,13,20,22,25,26]) = [];
+                    cleanMEG.trialinfo.balldesign_short([3,10,11,12,13,20,22,25,26]) = [];
+                 elseif 1 == strcmp(files(ii).name, 'Neu_Dislike500_3.mat')
+                    cleanMEG.trial([11]) = [];
+                    cleanMEG.time([11]) = [];
+                    cleanMEG.trialinfo.triggerchannel([11],:) = [];
+                    cleanMEG.trialinfo.responsechannel([11],:) = [];
+                    cleanMEG.trialinfo.triggerlabel([11]) = [];
+                    cleanMEG.trialinfo.response([11]) = [];
+                    cleanMEG.trialinfo.response_label([11]) = [];
+                    cleanMEG.trialinfo.balldesign([11]) = [];
+                    cleanMEG.trialinfo.balldesign_short([11]) = [];    
+                    
+                 elseif 1 == strcmp(files(ii).name, 'Neu_Like500_1.mat')
+                     % 39 trials, davon keine trials entfernt
+                     
+                     
+                     
+                 elseif 1 == strcmp(files(ii).name, 'Neu_Like500_2.mat')    
+                   % unklar, welche ich hier entfernt habe
+                    
+                elseif 1 == strcmp(files(ii).name, 'Neu_Like500_3.mat')
+                    cleanMEG.trial([15]) = [];
+                    cleanMEG.time(15) = [];
+                    cleanMEG.trialinfo.triggerchannel(15,:) = [];
+                    cleanMEG.trialinfo.responsechannel(15,:) = [];
+                    cleanMEG.trialinfo.triggerlabel(15) = [];
+                    cleanMEG.trialinfo.response(15) = [] ;
+                    cleanMEG.trialinfo.response_label(15) = [];
+                    cleanMEG.trialinfo.balldesign(15) = [];
+                    cleanMEG.trialinfo.balldesign_short(15) = [];
+                    
+                end
+                
+                cleanMEG.additional_cleaning = 'yes';
+            end
+
+
+
+             %% plot and save avg after cleaning
+            cfgn                = [];
+            cfgn.parameter      = 'trial';
+            cfgn.keeptrials     = 'yes'; % classifiers operate on individual trials
+            cfgn.vartrllength   = 2;
+
+            tcleanMEG            = ft_timelockanalysis(cfgn,cleanMEG);  
+            figure
+            plot(tcleanMEG.time, squeeze(mean(tcleanMEG.trial(:,1:248,:),1))) % MEG
+            axis tight;
+            title(files(ii).name(1:end-4))
+
+            saveas (gcf, [PathFigure_after_cleaning files(ii).name(1:end-4) '_extracleaning'], 'fig') % save EEG after cleaning figure to directory     
+            save ([path2cleanfile files(ii).name], 'cleanMEG'); % save mat-file after cleaning
         end
         
-        
-         %% plot and save avg after cleaning
- 
-        tcleanMEG            = ft_timelockanalysis(cfgn,cleanMEG);  
-        figure
-        plot(tcleanMEG.time, tcleanMEG.avg(1:248,:))     
-        axis tight;
-        title(strcat('MEG_', file(1:end-4)))
-        
-        saveas (gcf, [PathFigure_after_cleaning file(1:end-4)], 'fig') % save EEG after cleaning figure to directory 
-        
-%         load ([path_interpolated, files(i).name])
-        
-        
-        save ([path2cleanfile (files(i).name)], 'cleanMEG'); % save mat-file after cleaning
-        save ([path_interpolated (files(i).name)], 'RetVal'); % save mat-file after cleaning
-           clearvars cleanMEG    
-  
-        
-%         cfg.artfctdef.reject = 'complete';
-%         cfg.artfctdef.feedback = 'yes';
-%         MEG_clean = ft_rejectartifact(cfg, RetVal);
-%         
-%         badchannel = 'A231';
-%         cftb=[];
-%         cfgb.channel = {'all', '-A231'};
-%         [data] = ft_preprocessing(cfgb, RetVal)
-        
-        
-      
-       
-       
-%         title( strcat (StatsFile.name, {' '}, ConfigFile.Name, {' '}, TimeWindow.TimeWindow_string) );
-%         sourceplot_sign          = strcat(Path.Statistics, '\',  ConfigFile.name, '\', StatsFile.name, '_', 'sign');
-%         print('-dpng', sourceplot_sign);
-%          plot_ortho               = strcat( Path.SourceAnalysis, '\', ConfigFile.name, '\', 'avg_ortho', '_', ConfigFile.string );
-%         saveas(gcf,plot_ortho,'fig') 
-    
-       
+        clearvars cleanMEG
+
     end
 
 
